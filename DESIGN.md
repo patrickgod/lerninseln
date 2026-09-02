@@ -165,3 +165,114 @@ The architecture should assume this. One game, one folder, a shared
   the source language — but build it through a string table from day one
   rather than hard-coding, because that lesson was expensive to learn
   late on Tidegarden and free to apply early here.
+
+---
+
+# Islands and houses
+
+*Added after the first prototype, when the shell around the learning
+changed. Everything above still holds — the pedagogy, the ten-frame,
+the both-directions drilling, the no-fail rule — and the argument
+against points is answered rather than abandoned.*
+
+## What changed
+
+Patrick, looking at ANTON: *"jetzt finde ich die spiele in der ANTON app
+aber etwas stumpf. wieso den kids und den eltern nicht zeigen wie schön
+videospiele sein können?"*
+
+So the meadow became an **island**, and the box of games became a small
+archipelago:
+
+* A child picks an **island** — Die Insel der Zahlen, Die Insel der
+  Sprache. More islands are a data entry and a seed.
+* On each island stand **houses**. Each house is one kind of task.
+  Tapping the Haus der verliebten Zahlen gives ten partner-to-ten
+  questions; the Haus der Silben gives ten words to clap.
+* Finishing tasks earns two currencies, and new houses **arrive on the
+  island** as the first one crosses a threshold.
+* The second currency buys **decoration** — cherry trees, apple trees,
+  a pond, hens, a sheep, a cat, a fox, a bench, a well, a lighthouse —
+  which the child places on the island themselves.
+
+The island is the reward, the progress bar and the save file all at
+once, and it is the thing on screen for most of the time the app is
+open.
+
+## The two currencies, and why they are not the points this document
+## warned about
+
+The document above argues against points, streaks and stars. It is
+right about the things it means, and none of them are here:
+
+| the trap | why it is not here |
+|---|---|
+| **Points that measure you** | Sterne are not a score. They are never compared, never shown as a total out of anything, and there is no screen on which a number can be judged. |
+| **Streaks that punish the day you were ill** | Nothing decays. An island that was left for a month is exactly as it was. |
+| **Stars out of three** | There is no rating of a round. Ten questions give up to ten Sterne, and a Stern arrives for getting a fact right, not for getting the round right. |
+| **Grinding** | The star ladder for houses is short and then stops. After the last house, Sterne do nothing at all, and Bonbons buy trees. |
+
+**Sterne** only ever go up. They are a record of what has been learned
+and they unlock houses. **Bonbons** are the only number in the app that
+can go down, and only because the child chose to spend them on a sheep —
+that is agency, not punishment, and it is the one place where a falling
+number is a good thing. A decoration can be picked up again and the
+Bonbons come back in full, so even a regretted purchase is not a loss.
+
+The original argument was that *the collectible should be the learning
+object*, so that looking at the reward is itself revision. The island
+keeps the better half of that — a persistent scene that grows over weeks
+and is never taken away — and trades the rest for something the meadow
+did not have: **the child decides what it looks like.** A meadow that
+fills itself is a progress bar with animals on it. An island the child
+arranges is theirs.
+
+## The houses, and the ladder
+
+| island | house | opens at |
+|---|---|---|
+| Zahlen | Das Haus der verliebten Zahlen | from the start |
+| Zahlen | Das Haus der Nachbarzahlen | 12 Sterne |
+| Zahlen | Das Haus der Rechenmeister | 40 Sterne |
+| Zahlen | Das Haus der Zwillinge | 80 Sterne |
+| Sprache | Das Haus der ersten Laute | from the start |
+| Sprache | Das Haus der Silben | 20 Sterne |
+
+The first rung is deliberately flat: about two good rounds, so a child
+who plays twice on the first evening sees the island change and
+understands the whole mechanic without being told it. The gaps widen
+after that, because the point of the later houses is to still be
+arriving in three weeks.
+
+House positions are **fixed**. A child who learns that the Haus der
+verliebten Zahlen is the one in the middle should find it there
+tomorrow; a house that wanders is a house you cannot remember. The
+decorations, which the child places, are the part that moves.
+
+## Voice
+
+*"es wäre auch super cool, wenn einführende kurze texte von einer netten
+weichen frauenstimme vorgelesen werden könnten. die kinder sind
+schließlich in der ersten klasse."*
+
+This is not a nicety, it is the fix for AGENTS.md rule 13 — no text is
+load-bearing, because the child cannot reliably read yet. Every house
+speaks one short line when it opens, and it contains the whole
+instruction: *"Willkommen im Haus der verliebten Zahlen. Zwei Zahlen sind
+verliebt, wenn sie zusammen zehn ergeben. Tippe auf die passende Zahl."*
+
+The lines are generated at build time and shipped as MP3s, so the
+running app still makes no network calls; see README.md for the current
+state of that.
+
+## Still open
+
+* **Pictures for the Anlaute house.** It currently relies on hearing the
+  word. A drawn apple, ball and igel would make it work with the sound
+  off, which matters in a classroom.
+* **A settings screen.** Sound and voice are already two booleans in the
+  save with nothing to toggle them.
+* **The spaced repetition is in and invisible.** Every fact carries a
+  strength of 0..3 and weak facts come round four times as often. It has
+  never been watched over a real fortnight, which is the only way to
+  know whether the tilt is right.

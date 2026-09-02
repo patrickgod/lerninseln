@@ -1,0 +1,17 @@
+{
+  "name": "LernInseln",
+  "short_name": "LernInseln",
+  "description": "Lernen auf kleinen Inseln. Fuer die erste Klasse.",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#173a5c",
+  "theme_color": "#1f5479",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

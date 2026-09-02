@@ -1,0 +1,439 @@
+/* The iPad shell.
+ *
+ * Almost every rule here is a Safari trap from IPAD.md rather than a
+ * design decision, and the ones that are design decisions are about a
+ * six-year-old's hands rather than about taste:
+ *
+ *   Nothing is smaller than 64x64 with 12px of clear space. Apple's
+ *   44pt minimum is for adults with a mental model of what is tappable.
+ *
+ *   There is no hover state anywhere. Anything that only reveals itself
+ *   on hover does not exist on a tablet; :active does the work instead,
+ *   and the pressed state is obvious, because a child who is not sure
+ *   whether a tap registered will simply tap again.
+ */
+
+:root {
+  /* The palette, again, for the DOM half of the app. These must stay in
+     step with src/core/palette.ts by hand; there are few enough of them
+     that a build step to generate this file would cost more than it
+     saved, and tools/verify.mjs checks they match. */
+  --ink: #241d2b;
+  --sea: #1f5479;
+  --sea-deep: #173a5c;
+  --foam: #c9efe9;
+  --sand: #e0c694;
+  --plaster: #f8f0dc;
+  --plaster-dim: #eddfc0;
+  --chalk: #3f5c85;
+  --chalk-light: #8fb0d1;
+  --chalk-pale: #c9dcec;
+  --grass: #548544;
+  --glow: #e8b447;
+  --candy: #e88aa8;
+  --fruit: #c93a44;
+  --timber: #734f33;
+
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+}
+
+* {
+  box-sizing: border-box;
+  /* A long press must not select a numeral and pop the callout menu. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  /* No grey flash on every tap. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  /* Pull-to-refresh can reload the page mid-round. */
+  overscroll-behavior: none;
+  background: var(--sea-deep);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 800;
+}
+
+#app {
+  /* position:fixed on the root, so the whole game cannot rubber-band. */
+  position: fixed;
+  inset: 0;
+  /* 100dvh, not 100vh: with the tab bar visible, 100vh is taller than
+     the screen and the answer cards sit under the browser chrome. */
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+#stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* Pixel art must never be resampled. */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+#ui {
+  position: absolute;
+  inset: 0;
+  padding: calc(var(--safe-t) + 8px) calc(var(--safe-r) + 8px)
+           calc(var(--safe-b) + 8px) calc(var(--safe-l) + 8px);
+  /* The island is the thing you look at. The interface sits on top and
+     only the bits that are actually buttons catch a tap. */
+  pointer-events: none;
+}
+
+#ui > * { pointer-events: auto; }
+
+/* ------------------------------------------------------------ buttons */
+
+button {
+  font: inherit;
+  font-weight: 800;
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+  background: var(--plaster);
+  color: var(--ink);
+  min-width: 64px;
+  min-height: 64px;
+  padding: 10px 18px;
+  margin: 6px;
+  touch-action: manipulation;
+  box-shadow: 0 4px 0 var(--ink);
+  transition: transform 60ms ease, box-shadow 60ms ease;
+}
+
+button:active {
+  /* The pressed state has to be unmistakable. */
+  transform: translateY(4px);
+  box-shadow: 0 0 0 var(--ink);
+  background: var(--plaster-dim);
+}
+
+button:disabled { opacity: 0.45; }
+
+/* ------------------------------------------------------------ the HUD */
+
+.hud {
+  position: absolute;
+  top: calc(var(--safe-t) + 10px);
+  left: calc(var(--safe-l) + 10px);
+  right: calc(var(--safe-r) + 10px);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.hud .spacer { flex: 1; pointer-events: none; }
+
+.purse {
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.coin {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--plaster);
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  padding: 6px 16px 6px 8px;
+  font-size: 26px;
+  line-height: 1;
+  min-height: 52px;
+}
+
+.coin i {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+  display: block;
+}
+
+.coin.star i { background: var(--glow); }
+.coin.candy i { background: var(--candy); }
+
+/* ------------------------------------------------------- island picker */
+
+.picker {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: linear-gradient(180deg, #6b93b8 0%, #1f5479 100%);
+  padding: calc(var(--safe-t) + 12px) 12px calc(var(--safe-b) + 12px);
+}
+
+.picker h1 {
+  margin: 0 0 6px;
+  font-size: clamp(28px, 5vw, 52px);
+  color: var(--plaster);
+  text-shadow: 0 4px 0 var(--ink);
+  letter-spacing: 0.02em;
+}
+
+.cards {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.island-card {
+  width: clamp(210px, 34vw, 320px);
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 24px;
+}
+
+.island-card canvas {
+  image-rendering: pixelated;
+  border-radius: 14px;
+}
+
+.island-card .name { font-size: 22px; }
+.island-card .sub { font-size: 15px; font-weight: 600; opacity: 0.7; }
+
+/* -------------------------------------------------------- the round */
+
+.round {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #bcd9e8 0%, #94b9d4 100%);
+  padding: calc(var(--safe-t) + 8px) calc(var(--safe-r) + 12px)
+           calc(var(--safe-b) + 12px) calc(var(--safe-l) + 12px);
+}
+
+.round .top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 76px;
+  flex: 0 0 auto;
+}
+
+/* Progress is ten pips, not "3 / 10". A child who cannot read a
+   fraction can count beads, and the beads say the same thing. */
+.pips { display: flex; gap: 6px; flex: 1; justify-content: center; }
+.pip {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+  background: rgba(255,255,255,0.45);
+}
+.pip.done { background: var(--glow); }
+.pip.now { background: var(--plaster); transform: scale(1.25); }
+
+.stage-q {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 0;
+}
+
+.numeral {
+  font-size: clamp(64px, 13vh, 130px);
+  line-height: 1;
+  color: var(--chalk);
+  text-shadow: 0 5px 0 rgba(36,29,43,0.18);
+}
+
+.rechnung {
+  font-size: clamp(48px, 10vh, 100px);
+  line-height: 1;
+  color: var(--chalk);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.reihe { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.reihe span {
+  min-width: 66px;
+  padding: 8px 6px;
+  text-align: center;
+  font-size: clamp(28px, 5vh, 46px);
+  background: var(--plaster);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  color: var(--chalk);
+}
+.reihe span.gap { background: var(--chalk-pale); color: var(--chalk-light); }
+
+.wort {
+  font-size: clamp(38px, 8vh, 78px);
+  color: var(--chalk);
+}
+
+.speak {
+  font-size: 38px;
+  border-radius: 999px;
+  min-width: 92px;
+  min-height: 92px;
+  background: var(--glow);
+}
+
+.tenframe canvas { image-rendering: pixelated; display: block; }
+
+/* Answer cards live in the lower two-thirds and never in the top
+   corners: a child holds a tablet at the sides, with thumbs low. */
+.answers {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding-bottom: 6px;
+}
+
+.answers button {
+  width: clamp(110px, 17vw, 168px);
+  height: clamp(110px, 17vh, 168px);
+  font-size: clamp(46px, 8vh, 80px);
+  border-radius: 26px;
+  color: var(--chalk);
+  padding: 0;
+}
+
+.answers button.right {
+  background: var(--grass);
+  color: var(--plaster);
+}
+
+/* A miss does not go red. The card lifts back to where it came from and
+   the ten-frame shows what that choice WOULD have made. */
+.answers button.miss {
+  animation: nudge 340ms ease;
+  opacity: 0.5;
+}
+
+@keyframes nudge {
+  0%   { transform: translateY(0); }
+  35%  { transform: translateY(10px) scale(0.96); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* --------------------------------------------------------- overlays */
+
+.sheet {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(23,58,92,0.86);
+  padding: calc(var(--safe-t) + 16px) 16px calc(var(--safe-b) + 16px);
+}
+
+.sheet h2 {
+  margin: 0;
+  font-size: clamp(26px, 5vw, 46px);
+  color: var(--plaster);
+  text-shadow: 0 4px 0 var(--ink);
+  text-align: center;
+}
+
+.sheet .reward {
+  display: flex;
+  gap: 20px;
+  animation: pop 420ms ease both;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 14px;
+  width: min(94vw, 900px);
+  max-height: 62vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 6px;
+}
+
+.shop-item {
+  display: grid;
+  /* A fixed picture box, then the label, then the price. Without the
+     fixed row the cards size themselves to their sprite and the labels
+     land at six different heights down the row, which reads as broken
+     rather than as varied. */
+  grid-template-rows: 76px auto auto;
+  justify-items: center;
+  align-items: end;
+  gap: 4px;
+  padding: 10px 6px;
+  height: 168px;
+  border-radius: 20px;
+}
+
+.shop-item canvas { image-rendering: pixelated; align-self: end; }
+.shop-item .label { font-size: 14px; font-weight: 700; }
+.shop-item .price {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 18px;
+}
+.shop-item .price i {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--ink); background: var(--candy);
+  display: block;
+}
+
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--safe-b) + 24px);
+  transform: translateX(-50%);
+  background: var(--plaster);
+  border: 3px solid var(--ink);
+  border-radius: 18px;
+  padding: 12px 22px;
+  font-size: 20px;
+  box-shadow: 0 4px 0 var(--ink);
+  animation: pop 260ms ease both;
+}
+
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--safe-b) + 96px);
+  transform: translateX(-50%);
+  color: var(--plaster);
+  background: rgba(36,29,43,0.62);
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-size: 20px;
+  pointer-events: none;
+}

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<!-- Every part of this is load-bearing on an iPad; see IPAD.md.
+     viewport-fit=cover for the safe areas, maximum-scale + user-scalable
+     to kill double-tap zoom, and width=device-width so the legacy 300ms
+     click delay never appears in the first place. -->
+<meta name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#1f5479">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LernInseln">
+<meta name="description" content="LernInseln - Lernen auf kleinen Inseln. Fuer die erste Klasse.">
+<title>LernInseln</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="stage"></canvas>
+  <div id="ui"></div>
+</div>
+<script type="module" src="main.js"></script>
+</body>
+</html>
