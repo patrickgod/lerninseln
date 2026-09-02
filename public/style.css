@@ -704,3 +704,22 @@ a.dl:active { transform: translateY(4px); box-shadow: 0 0 0 var(--ink); }
   text-align: center;
   max-width: 32em;
 }
+
+/* One dot per house on an island: filled for the ones that are there,
+   hollow for the ones still coming. Progress without a number. */
+.houses {
+  display: flex;
+  gap: 7px;
+  margin-top: 4px;
+}
+
+.hdot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+  background: transparent;
+  opacity: 0.45;
+}
+
+.hdot.open { background: var(--glow); opacity: 1; }

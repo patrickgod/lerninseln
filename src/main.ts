@@ -44,6 +44,8 @@ let hover: { x: number; y: number } | null = null;
 let arriving: string | null = null;
 let arrivingUntil = 0;
 let houseHits: render.HouseHit[] = [];
+/** The picker's live island previews, redrawn each frame. */
+const thumbs: { c: HTMLCanvasElement; id: string; w: number; h: number }[] = [];
 /** One DOM label per house, repositioned from the hit rects each frame. */
 const houseLabels = new Map<string, HTMLDivElement>();
 let view: render.View = { scale: 2, ox: 0, oy: 0 };
@@ -180,6 +182,21 @@ function frame(now: number): void {
     placeLabels();
   }
 
+  // The picker's island previews are LIVE. They already show what the
+  // child has built, so leaving them frozen made the picker the one
+  // screen where the sea did not move — and it is the first screen
+  // anybody sees.
+  if (screen === 'picker') {
+    for (const th of thumbs) {
+      const tx = th.c.getContext('2d', { willReadFrequently: true })!;
+      tx.setTransform(2, 0, 0, 2, 0, 0);
+      tx.clearRect(0, 0, th.c.width, th.c.height);
+      render.draw(tx, render.fit(th.w, th.h, th.id), th.w, th.h, {
+        islandId: th.id, time, building: false, hover: null, arriving: null,
+      });
+    }
+  }
+
   const dpr = Math.min(3, window.devicePixelRatio || 1);
   fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
@@ -262,6 +279,7 @@ function placeLabels(): void {
 function clear(): void {
   ui.replaceChildren();
   houseLabels.clear();
+  thumbs.length = 0;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -509,11 +527,24 @@ function showPicker(): void {
   wrap.appendChild(el('p', 'lead', t('islands.lead')));
 
   const cards = el('div', 'cards');
+  const stars = state.get().stars;
   for (const def of ISLANDS) {
     const card = el('button', 'island-card');
-    card.appendChild(islandThumb(def, 200, 120));
+    card.appendChild(islandThumb(def, 260, 155));
     card.appendChild(el('div', 'name', t(def.nameKey)));
     card.appendChild(el('div', 'sub', t(def.subKey)));
+
+    // How far along this island is, WITHOUT a number. One dot per
+    // house: filled for the ones that are there, hollow for the ones
+    // still coming. DESIGN.md asks for progress that is visible without
+    // being numeric, and this is that — a child counts the dots or does
+    // not, and either way sees there is more.
+    const dots = el('div', 'houses');
+    for (const h of housesOn(def.id)) {
+      dots.appendChild(el('div', `hdot${h.stars <= stars ? ' open' : ''}`));
+    }
+    card.appendChild(dots);
+
     tap(card, () => {
       audio.click();
       openIsland(def.id);
@@ -540,10 +571,10 @@ function islandThumb(def: IslandDef, w: number, h: number): HTMLCanvasElement {
   c.style.height = `${h}px`;
   const cx = c.getContext('2d', { willReadFrequently: true })!;
   cx.setTransform(2, 0, 0, 2, 0, 0);
-  const v = render.fit(w, h, def.id);
-  render.draw(cx, v, w, h, {
+  render.draw(cx, render.fit(w, h, def.id), w, h, {
     islandId: def.id, time: 0, building: false, hover: null, arriving: null,
   });
+  thumbs.push({ c, id: def.id, w, h });
   return c;
 }
 
