@@ -95,14 +95,24 @@ export function form(f: Form, size = S): Px {
       break;
     }
     case 'herz': {
-      // Two lobes and a point, from the same bitmap idea as the
-      // ten-frame counter but bigger.
-      for (let y = -r; y <= r; y++) {
-        for (let x = -r; x <= r; x++) {
-          const nx = x / r, ny = (y - r * 0.15) / r;
-          const t = nx * nx + ny * ny - 0.6;
-          if (t * t * t - nx * nx * ny * ny * ny * 0.9 <= 0) put(c + x, c + y);
+      // Two circles and a triangle, not an implicit curve. The tidy
+      // algebraic heart (x²+y²-1)³ - x²y³ = 0 makes a beautiful shape
+      // on paper and, sampled onto thirty pixels, square lobes and a
+      // notch — which is what the first version drew.
+      const lobeR = Math.round(r * 0.5);
+      const lobeY = c - Math.round(r * 0.28);
+      for (const lx of [c - Math.round(r * 0.44), c + Math.round(r * 0.44)]) {
+        for (let y = -lobeR; y <= lobeR; y++) {
+          const half = Math.round(Math.sqrt(Math.max(0, lobeR * lobeR - y * y)));
+          for (let x = -half; x <= half; x++) put(lx + x, lobeY + y);
         }
+      }
+      const top = lobeY;
+      const tip = c + Math.round(r * 0.95);
+      for (let y = top; y <= tip; y++) {
+        const k = (y - top) / (tip - top);
+        const half = Math.round(r * 0.95 * (1 - k));
+        for (let x = -half; x <= half; x++) put(c + x, y);
       }
       break;
     }

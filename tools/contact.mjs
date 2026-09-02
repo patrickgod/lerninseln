@@ -87,6 +87,40 @@ names.forEach((name, i) => {
 `);
 }
 
+// ------------------------------------------------------------- shapes
+
+if (doIt('formen')) {
+  await sheet('formen', `
+import { FORMEN, form } from '../src/games/formen.js';
+
+const SCALE = 6, COLS = 3, CELL = 34 * SCALE, LABEL = 30;
+const rows = Math.ceil(FORMEN.length / COLS);
+const c = document.createElement('canvas');
+c.width = COLS * (CELL + 20) + 20;
+c.height = rows * (CELL + LABEL + 20) + 20;
+document.body.appendChild(c);
+const ctx = c.getContext('2d')!;
+ctx.imageSmoothingEnabled = false;
+ctx.fillStyle = '#bcd9e8';
+ctx.fillRect(0, 0, c.width, c.height);
+
+FORMEN.forEach((f, i) => {
+  const col = i % COLS, row = (i / COLS) | 0;
+  const x = 20 + col * (CELL + 20);
+  const y = 20 + row * (CELL + LABEL + 20);
+  ctx.fillStyle = '#f8f0dc';
+  ctx.fillRect(x, y, CELL, CELL);
+  ctx.drawImage(form(f).toCanvas(), x, y, CELL, CELL);
+  ctx.fillStyle = '#241d2b';
+  ctx.font = 'bold 22px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(f, x + CELL / 2, y + CELL + 24);
+});
+
+(window as any).ready = true;
+`);
+}
+
 // -------------------------------------------------- everything on land
 
 if (doIt('insel')) {
