@@ -19,7 +19,7 @@
 //   rasteriser does not pay for mixed surfaces.
 
 import { P, shade } from '../core/palette.js';
-import { GRID, isLand, isSand, island, unlockedHouses, type HouseDef } from './islands.js';
+import { GRID, isLand, isSand, island, unlockedHouses, housesOn, type HouseDef } from './islands.js';
 import * as S from './sprites.js';
 import * as state from '../core/state.js';
 import { deco } from './decor.js';
@@ -86,6 +86,38 @@ function decoSprite(art: string, seed: number): Baked {
       default: return S.flowers(seed);
     }
   });
+}
+
+// ------------------------------------------------------------- dapple
+
+/**
+ * The drifting light on the meadow.
+ *
+ * Sine terms were the obvious choice and the wrong one: however many
+ * you add, a sum of sines sampled on a square grid produces a beat
+ * pattern that lines up with the grid, and the meadow came out in big
+ * rectangular patches that read as a mowing plan rather than as light.
+ *
+ * This is value noise instead — a hash at each corner of a coarse cell,
+ * smoothly interpolated. It has no period at all, so there is nothing
+ * for the eye to lock onto, and the drift comes from moving the sample
+ * point rather than from adding time to a phase.
+ */
+function hash2(x: number, y: number): number {
+  let h = (x * 374761393 + y * 668265263) | 0;
+  h = (h ^ (h >>> 13)) * 1274126177 | 0;
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+function noise2(x: number, y: number): number {
+  const xi = Math.floor(x), yi = Math.floor(y);
+  const xf = x - xi, yf = y - yi;
+  // smoothstep, so the cells do not show as diamonds at their corners
+  const u = xf * xf * (3 - 2 * xf);
+  const v = yf * yf * (3 - 2 * yf);
+  const a = hash2(xi, yi), b = hash2(xi + 1, yi);
+  const c = hash2(xi, yi + 1), d = hash2(xi + 1, yi + 1);
+  return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
 }
 
 // ------------------------------------------------------------ scenery
@@ -228,6 +260,8 @@ export interface HouseHit {
   house: HouseDef;
   /** CSS-pixel rectangle. */
   x: number; y: number; w: number; h: number;
+  /** True for a plot: the house is coming, but is not there yet. */
+  locked: boolean;
 }
 
 export function draw(
@@ -257,6 +291,7 @@ export function draw(
   const phase = Math.floor((o.time * 2.2) % WAVE_PHASES);
   const stars = state.get().stars;
   const houses = unlockedHouses(o.islandId, stars);
+  const coming = housesOn(o.islandId).filter((h) => !houses.includes(h));
   const placed = state.placedOn(o.islandId);
   const trees = sceneryOf(o.islandId);
   const treeKind = island(o.islandId).tree;
@@ -315,8 +350,14 @@ export function draw(
       // Ground. The `light` step comes from a slow drifting dapple, so
       // the meadow varies without any tile shading itself — which is
       // what stops the field turning into diagonal corduroy.
-      const dapple = Math.sin(x * 0.7 + y * 0.4 + o.time * 0.08) + Math.sin(x * 0.3 - y * 0.9);
-      const light = dapple > 1.1 ? 1 : dapple < -1.1 ? -1 : 0;
+      // Two octaves of value noise, drifting slowly. The coarse one
+      // makes the patches, the fine one stops their edges being smooth
+      // curves — which at one sample per tile would read as contour
+      // lines on a map.
+      const drift = o.time * 0.012;
+      const dapple = noise2(x * 0.34 + drift, y * 0.34 - drift * 0.6) * 0.75
+        + noise2(x * 0.9, y * 0.9) * 0.25;
+      const light = dapple > 0.62 ? 1 : dapple < 0.38 ? -1 : 0;
       const sand = isSand(o.islandId, x, y);
       const ramp = sand ? P.sand : P.grass;
       const g = bake(`g:${sand ? 's' : 'g'}:${(x * 31 + y * 17) % 7}:${light}`,
@@ -327,6 +368,7 @@ export function draw(
       // squares would shout; this is a thin outline that reads as
       // "here is allowed" without becoming the subject of the picture.
       if (o.building && !sand
+        && !coming.some((hh) => hh.x === x && hh.y === y)
         && !houses.some((hh) => hh.x === x && hh.y === y)
         && !placed.some((pp) => pp.x === x && pp.y === y)) {
         const on = o.hover && o.hover.x === x && o.hover.y === y;
@@ -348,8 +390,22 @@ export function draw(
       const tree = trees.find((tt) => tt.x === x && tt.y === y);
       const built = placed.find((pp) => pp.x === x && pp.y === y);
       const hs = houses.find((hh) => hh.x === x && hh.y === y);
+      const soon = coming.find((hh) => hh.x === x && hh.y === y);
 
-      if (hs) {
+      if (soon) {
+        // A plot where a house is going to be. An island with a visible
+        // future is more motivating than one that looks finished.
+        const b = bake(`plot:${soon.id}`, () => S.plot(soon.x * 977 + soon.y * 31));
+        ctx.drawImage(b.c, Math.round(sx - b.ax), Math.round(sy - b.ay));
+        hits.push({
+          house: soon,
+          x: (sx - b.ax) * v.scale,
+          y: (sy - b.ay) * v.scale,
+          w: b.c.width * v.scale,
+          h: b.c.height * v.scale,
+          locked: true,
+        });
+      } else if (hs) {
         const isArriving = o.arriving === hs.id;
         const bob = isArriving ? Math.round(Math.sin(o.time * 6) * 2) : 0;
         const b = bake(`h:${hs.roof}:${hs.id}`,
@@ -362,6 +418,7 @@ export function draw(
           y: (sy - b.ay + bob) * v.scale,
           w: b.c.width * v.scale,
           h: b.c.height * v.scale,
+          locked: false,
         });
       } else if (built) {
         const d = deco(built.d);

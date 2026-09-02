@@ -35,6 +35,9 @@ const DE = {
   'island.needStars': 'Du brauchst {n} Sterne',
   'island.newHouse': 'Ein neues Haus ist da!',
   'island.tapHouse': 'Tippe auf ein Haus',
+  'island.pickHouse': 'Wähle ein Haus, um zu starten',
+  'island.fromStars': 'ab {n} Sternen',
+  'island.stillLocked': 'Noch {n} Sterne, dann zieht hier jemand ein',
 
   // -------------------------------------------------------- the shop
   'shop.title': 'Was möchtest du bauen?',
@@ -50,6 +53,17 @@ const DE = {
   'house.anlaute': 'Das Haus der ersten Laute',
   'house.silben': 'Das Haus der Silben',
 
+  // One line per house, for the grown-up sitting next to the child.
+  // Deliberately says what is PRACTISED, not what the game does — a
+  // parent who reads "Partnerzahlen zur Zehn" knows what their child is
+  // working on and can talk to the teacher about it.
+  'house.verliebteZahlen.sub': 'Partnerzahlen zur Zehn — 3 und 7, 6 und 4',
+  'house.zahlenreihe.sub': 'Vorgänger und Nachfolger bis 20',
+  'house.rechenmeister.sub': 'Plus und Minus im Zahlenraum bis 10',
+  'house.zwillinge.sub': 'Verdoppeln bis 20',
+  'house.anlaute.sub': 'Anlaute hören — mit welchem Buchstaben fängt es an?',
+  'house.silben.sub': 'Silben klatschen',
+
   // ------------------------------------------------------ the rounds
   'round.progress': 'Aufgabe {n} von {total}',
   'round.done': 'Geschafft!',
@@ -62,7 +76,8 @@ const DE = {
   // The prompts a house speaks when it opens. These are the lines the
   // voice actually says, so they are short, warm, and contain the whole
   // instruction — a child who cannot read has only this.
-  'say.pickIsland': 'Wähle eine Insel.',
+  'say.pickIsland': 'Hallo! Such dir eine Insel aus.',
+  'say.pickHouse': 'Tippe auf ein Haus, dann geht es los.',
   'say.mathe': 'Die Insel der Zahlen. Hier wohnen die Zahlen.',
   'say.sprache': 'Die Insel der Sprache. Hier wohnen die Wörter.',
   'say.verliebteZahlen':

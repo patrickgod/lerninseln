@@ -12,7 +12,20 @@
 
 import { t } from '../core/i18n.js';
 
-export const GRID = 13;
+/**
+ * The island is a GRID x GRID field of tiles.
+ *
+ * Seventeen, not thirteen. The first prototype gave the child about
+ * forty buildable tiles, which sounds like plenty and is not: houses
+ * take four of them, the beach is not buildable, and a child who has
+ * bought a dozen things has filled the place up. An island you cannot
+ * keep decorating stops being yours and becomes a puzzle with a
+ * solution.
+ *
+ * The camera fits the LAND rather than the grid, so a bigger island
+ * costs a little zoom rather than a lot of empty sea.
+ */
+export const GRID = 17;
 
 export interface HouseDef {
   id: string;
@@ -78,7 +91,7 @@ export const HOUSES: HouseDef[] = [
     nameKey: 'house.verliebteZahlen',
     sayKey: 'say.verliebteZahlen',
     stars: 0,
-    x: 6, y: 6,
+    x: 8, y: 8,
     roof: 'terracotta',
     game: 'verliebte-zahlen',
   },
@@ -88,7 +101,7 @@ export const HOUSES: HouseDef[] = [
     nameKey: 'house.zahlenreihe',
     sayKey: 'say.zahlenreihe',
     stars: 12,
-    x: 4, y: 7,
+    x: 5, y: 9,
     roof: 'slate',
     game: 'zahlenreihe',
   },
@@ -98,7 +111,7 @@ export const HOUSES: HouseDef[] = [
     nameKey: 'house.rechenmeister',
     sayKey: 'say.rechenmeister',
     stars: 40,
-    x: 8, y: 5,
+    x: 11, y: 7,
     roof: 'thatch',
     game: 'rechenmeister',
   },
@@ -108,7 +121,7 @@ export const HOUSES: HouseDef[] = [
     nameKey: 'house.zwillinge',
     sayKey: 'say.zwillinge',
     stars: 80,
-    x: 5, y: 4,
+    x: 6, y: 5,
     roof: 'terracotta',
     game: 'zwillinge',
   },
@@ -120,7 +133,7 @@ export const HOUSES: HouseDef[] = [
     nameKey: 'house.anlaute',
     sayKey: 'say.anlaute',
     stars: 0,
-    x: 6, y: 6,
+    x: 8, y: 8,
     roof: 'slate',
     game: 'anlaute',
   },
@@ -130,7 +143,7 @@ export const HOUSES: HouseDef[] = [
     nameKey: 'house.silben',
     sayKey: 'say.silben',
     stars: 20,
-    x: 7, y: 8,
+    x: 10, y: 11,
     roof: 'thatch',
     game: 'silben',
   },
@@ -232,7 +245,7 @@ export function land(islandId: string): Land {
         mask[i] = true;
         // The beach is the outer band of the same field, so it follows
         // every wiggle of the coast for free.
-        sand[i] = d > edge - 0.20;
+        sand[i] = d > edge - 0.155;
       }
     }
   }
@@ -267,8 +280,12 @@ export function isSand(islandId: string, x: number, y: number): boolean {
 }
 
 /** A tile a decoration may be placed on: land, not sand, not a house. */
-export function buildable(islandId: string, x: number, y: number, stars: number): boolean {
+export function buildable(islandId: string, x: number, y: number): boolean {
   if (!isLand(islandId, x, y)) return false;
   if (isSand(islandId, x, y)) return false;
-  return !unlockedHouses(islandId, stars).some((h) => h.x === x && h.y === y);
+  // Every house tile is off limits, including the ones that are still
+  // only a marked-out plot — a cherry tree planted where the Haus der
+  // Zwillinge is going to be would have to be bulldozed later, and
+  // nothing in this app takes anything away from a child.
+  return !housesOn(islandId).some((h) => h.x === x && h.y === y);
 }

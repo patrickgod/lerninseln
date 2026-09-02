@@ -757,3 +757,71 @@ export function house(
   contact(p, cx, baseY + 2, hw * 2 + 4, hh * 2 + 3);
   return { px: p, ...anchor(p) };
 }
+
+/**
+ * A building plot: where a house is going to be, but is not yet.
+ *
+ * Worth drawing rather than leaving empty, because an island with a
+ * visible future is more motivating than one that looks finished. It is
+ * a GOAL, not a judgement — a marked-out plot with a signpost says
+ * "somebody is moving in here", where a locked door with a padlock
+ * would say "you are not good enough yet", and this app does not say
+ * that.
+ *
+ * Deliberately quiet: pegs, string, a little earth. ART-DIRECTION's
+ * rule is that things ARRIVE rather than alert, so the plot must not
+ * out-shout the houses that are actually there.
+ */
+export function plot(seed: number): Sprite {
+  const p = new Px(40, 40);
+  const baseY = p.h - 1 - TILE_H / 2;
+  const cx = 20;
+  const rn = rand(seed);
+
+  // A patch of turned earth, one tile across.
+  p.diamond(cx, baseY, 26, 13, shade(P.earth, 1));
+  for (let i = 0; i < 22; i++) {
+    const a = rn() * Math.PI * 2, d = Math.sqrt(rn());
+    p.set(cx + Math.round(Math.cos(a) * d * 11), baseY + Math.round(Math.sin(a) * d * 5),
+      shade(P.earth, rn() > 0.5 ? 2 : 0));
+  }
+
+  // Four corner pegs with string between them, which is what a marked
+  // -out plot actually looks like.
+  const pegs: [number, number][] = [
+    [cx - 12, baseY], [cx, baseY - 6], [cx + 12, baseY], [cx, baseY + 6],
+  ];
+  for (let k = 0; k < 4; k++) {
+    const [x0, y0] = pegs[k];
+    const [x1, y1] = pegs[(k + 1) % 4];
+    p.line(x0, y0 - 5, x1, y1 - 5, shade(P.dry, 2));
+  }
+  for (const [x, y] of pegs) {
+    for (let j = 0; j < 6; j++) {
+      p.set(x, y - j, shade(P.timber, 2));
+      p.set(x + 1, y - j, shade(P.timber, 0));
+    }
+  }
+
+  // A signpost, and a star on it: the thing you are working towards.
+  const sx = cx + 7;
+  for (let j = 0; j < 13; j++) {
+    p.set(sx, baseY - 2 - j, shade(P.timber, 2));
+    p.set(sx + 1, baseY - 2 - j, shade(P.timber, 0));
+  }
+  p.rect(sx - 5, baseY - 22, 12, 9, shade(P.plaster, 3));
+  p.rect(sx - 4, baseY - 21, 10, 7, shade(P.plaster, 4));
+  // a five-pointed star, small, drawn as a plus with corners
+  const gx = sx + 1, gy = baseY - 17;
+  p.line(gx - 3, gy, gx + 3, gy, shade(P.glow, 3));
+  p.line(gx, gy - 3, gx, gy + 3, shade(P.glow, 3));
+  p.set(gx - 2, gy - 2, shade(P.glow, 2));
+  p.set(gx + 2, gy - 2, shade(P.glow, 2));
+  p.set(gx - 2, gy + 2, shade(P.glow, 2));
+  p.set(gx + 2, gy + 2, shade(P.glow, 2));
+  p.set(gx, gy, shade(P.glow, 4));
+
+  finish(p);
+  contact(p, cx, baseY + 1, 26, 13);
+  return { px: p, ...anchor(p) };
+}

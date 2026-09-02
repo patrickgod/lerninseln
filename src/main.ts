@@ -12,7 +12,7 @@ import * as state from './core/state.js';
 import * as audio from './core/audio.js';
 import { tenFrameCanvas } from './core/tenframe.js';
 import {
-  ISLANDS, GRID, island, unlockedHouses, nextHouse, buildable,
+  ISLANDS, GRID, island, unlockedHouses, housesOn, buildable,
   type IslandDef, type HouseDef,
 } from './islands/islands.js';
 import * as render from './islands/render.js';
@@ -39,6 +39,8 @@ let hover: { x: number; y: number } | null = null;
 let arriving: string | null = null;
 let arrivingUntil = 0;
 let houseHits: render.HouseHit[] = [];
+/** One DOM label per house, repositioned from the hit rects each frame. */
+const houseLabels = new Map<string, HTMLDivElement>();
 let view: render.View = { scale: 2, ox: 0, oy: 0 };
 let started = 0;
 
@@ -100,14 +102,47 @@ function frame(now: number): void {
       arriving: arriving && now < arrivingUntil ? arriving : null,
     });
     if (arriving && now >= arrivingUntil) arriving = null;
+    placeLabels();
   }
   requestAnimationFrame(frame);
+}
+
+/**
+ * Put each house's label under the house it belongs to.
+ *
+ * The houses live on the canvas and the labels are DOM, so the two have
+ * to be reconciled every frame — the alternative is drawing text into
+ * the canvas, which at this pixel scale would either be a hand-rolled
+ * bitmap font or a blurry mess.
+ *
+ * Patrick, on why the labels exist at all: "vielleicht sitzen ja eltern
+ * dabei". The child navigates by the coloured sign over the door; the
+ * label is for the grown-up next to them, and for the child later, when
+ * they can read.
+ */
+function placeLabels(): void {
+  if (!houseLabels.size) return;
+  const seen = new Set<string>();
+  for (const hit of houseHits) {
+    const label = houseLabels.get(hit.house.id);
+    if (!label) continue;
+    seen.add(hit.house.id);
+    label.style.left = `${Math.round(hit.x + hit.w / 2)}px`;
+    label.style.top = `${Math.round(hit.y + hit.h - 6)}px`;
+    label.style.visibility = 'visible';
+  }
+  // A house that did not draw this frame — scrolled off, or not there —
+  // must not leave its label stranded in the corner.
+  for (const [id, label] of houseLabels) {
+    if (!seen.has(id)) label.style.visibility = 'hidden';
+  }
 }
 
 // ------------------------------------------------------------- helpers
 
 function clear(): void {
   ui.replaceChildren();
+  houseLabels.clear();
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -244,16 +279,25 @@ function drawIslandUi(): void {
   }
   ui.appendChild(bar);
 
+  // One label per house, unlocked or not. `placeLabels` moves them.
+  const labels = el('div', 'labels');
+  const stars = state.get().stars;
+  for (const h of housesOn(currentIsland)) {
+    const open = h.stars <= stars;
+    const label = el('div', `house-label${open ? '' : ' soon'}`);
+    label.appendChild(el('div', 'name', t(h.nameKey)));
+    label.appendChild(el('div', 'sub',
+      open ? t(`${h.nameKey}.sub`) : t('island.fromStars', { n: h.stars })));
+    label.style.visibility = 'hidden';
+    labels.appendChild(label);
+    houseLabels.set(h.id, label);
+  }
+  ui.appendChild(labels);
+
   if (building) {
-    const hint = el('div', 'hint',
-      holding ? t('shop.placeIt') : t('island.build'));
-    ui.appendChild(hint);
+    ui.appendChild(el('div', 'hint', holding ? t('shop.placeIt') : t('island.build')));
   } else {
-    const next = nextHouse(currentIsland, state.get().stars);
-    if (next) {
-      const need = next.stars - state.get().stars;
-      ui.appendChild(el('div', 'hint', t('island.needStars', { n: need })));
-    }
+    ui.appendChild(el('div', 'hint', t('island.pickHouse')));
   }
 }
 
@@ -278,7 +322,15 @@ stage.addEventListener('pointerdown', (ev) => {
   // at the roof, which belongs to the tile two rows behind.
   const hit = [...houseHits].reverse().find((hh) =>
     px >= hh.x && px <= hh.x + hh.w && py >= hh.y && py <= hh.y + hh.h);
-  if (hit) startRound(hit.house);
+  if (!hit) return;
+  if (hit.locked) {
+    // Not a refusal, a promise. The plot says somebody is moving in,
+    // and this says when.
+    audio.click();
+    toast(t('island.stillLocked', { n: hit.house.stars - state.get().stars }));
+    return;
+  }
+  startRound(hit.house);
 });
 
 stage.addEventListener('pointermove', (ev) => {
@@ -304,7 +356,7 @@ function onBuildTap(x: number, y: number): void {
   }
 
   if (!holding) return;
-  if (!buildable(currentIsland, x, y, state.get().stars)) return;
+  if (!buildable(currentIsland, x, y)) return;
   if (state.occupied(currentIsland, x, y)) return;
 
   const d = deco(holding);
