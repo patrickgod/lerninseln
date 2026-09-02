@@ -28,6 +28,16 @@ export interface FrameOpts {
   extra?: number;
   /** Draw the counters at all, or only the empty frame. */
   filled?: boolean;
+  /**
+   * What a counter looks like.
+   *
+   * `herz` for the Haus der verliebten Zahlen, where the whole idea is
+   * that two numbers are in love and the pair completes each other, and
+   * `perle` everywhere else. A heart in a plain addition frame would be
+   * decoration; a heart in THIS frame is the metaphor the house is
+   * named after, and a six-year-old will read it without being told.
+   */
+  shape?: 'perle' | 'herz';
 }
 
 export function tenFrame(o: FrameOpts): Px {
@@ -53,40 +63,75 @@ export function tenFrame(o: FrameOpts): Px {
 
   if (o.filled === false) return p;
 
-  // A counter, drawn from an explicit circle table rather than from the
-  // scanline ellipse. At radius four the ellipse rasteriser produces a
+  // Two counter shapes, both drawn from an explicit table rather than
+  // from the scanline ellipse. At radius four the rasteriser produces a
   // lumpy, slightly asymmetric blob, and ten of them side by side make
-  // the frame look hand-shaken. These nine rows are the classic
-  // pixel-art disc and they are identical every time.
+  // the frame look hand-shaken.
+  //
+  // Half-widths per row for the disc; a bitmap for the heart, because a
+  // heart is not a function of its row and trying to make it one gives
+  // you a spade.
   const DISC = [1, 3, 3, 4, 4, 4, 3, 3, 1];
+  const HERZ = [
+    '.##...##.',
+    '#########',
+    '#########',
+    '#########',
+    '#########',
+    '.#######.',
+    '..#####..',
+    '...###...',
+    '....#....',
+  ];
 
-  const counter = (i: number, ramp: readonly string[]): void => {
+  const counter = (i: number, ramp: readonly string[], shape: 'perle' | 'herz'): void => {
     const col = i % 5, row = Math.floor(i / 5);
     const cx = PAD + col * CELL + Math.floor(CELL / 2);
     const cy = PAD + row * CELL + Math.floor(CELL / 2) + (row === 1 ? 1 : 0);
+
+    // Light upper-left, shade lower-right — the same rule as every
+    // sprite on the island, so the counters belong to the same world.
+    //
+    // The band is narrow on purpose. A wide diagonal split across nine
+    // pixels does not read as a lit form, it reads as a coin lying at
+    // an angle, and ten of those in a row made the frame look like it
+    // was sliding off the screen.
+    const lit = (dx: number, dy: number): number =>
+      dx + dy <= -5 ? 3 : dx + dy >= 5 ? 1 : 2;
+
+    if (shape === 'herz') {
+      for (let j = 0; j < HERZ.length; j++) {
+        const dy = j - 4;
+        for (let k = 0; k < HERZ[j].length; k++) {
+          if (HERZ[j][k] !== '#') continue;
+          const dx = k - 4;
+          p.set(cx + dx, cy + dy, shade(ramp, lit(dx, dy)));
+        }
+      }
+      // The catchlight sits on the left lobe, which is where a rounded
+      // thing lit from the upper left actually catches it.
+      p.set(cx - 3, cy - 3, shade(ramp, 4));
+      p.set(cx - 2, cy - 3, shade(ramp, 4));
+      p.set(cx - 3, cy - 2, shade(ramp, 4));
+      return;
+    }
+
     for (let j = 0; j < DISC.length; j++) {
       const dy = j - 4;
       for (let dx = -DISC[j]; dx <= DISC[j]; dx++) {
-        // Light upper-left, shade lower-right — the same rule as every
-        // sprite on the island, so the beads belong to the same world.
-        //
-        // The band is narrow on purpose. A wide diagonal split across a
-        // nine-pixel disc does not read as a lit sphere, it reads as a
-        // coin lying at an angle, and ten of those in a row made the
-        // frame look like it was sliding off the screen.
-        const lit = dx + dy <= -5 ? 3 : dx + dy >= 5 ? 1 : 2;
-        p.set(cx + dx, cy + dy, shade(ramp, lit));
+        p.set(cx + dx, cy + dy, shade(ramp, lit(dx, dy)));
       }
     }
-    // One specular pixel, where the light actually is.
     p.set(cx - 2, cy - 2, shade(ramp, 4));
   };
 
+  const shape = o.shape ?? 'perle';
   const n = Math.max(0, Math.min(10, o.n));
-  for (let i = 0; i < n; i++) counter(i, P.chalk);
+  // Hearts are the colour of a heart. Beads take the learning blue.
+  for (let i = 0; i < n; i++) counter(i, shape === 'herz' ? P.blossom : P.chalk, shape);
 
   const extra = Math.max(0, Math.min(10 - n, o.extra ?? 0));
-  for (let i = 0; i < extra; i++) counter(n + i, P.fruit);
+  for (let i = 0; i < extra; i++) counter(n + i, P.fruit, shape);
 
   return p;
 }

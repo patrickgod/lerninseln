@@ -456,7 +456,7 @@ function promptView(p: Prompt, q: Question): HTMLElement {
     case 'tenframe': {
       if (p.n >= 0) {
         const f = el('div', 'tenframe');
-        f.appendChild(tenFrameCanvas({ n: p.n }, frameScale()));
+        f.appendChild(tenFrameCanvas({ n: p.n, shape: counterShape() }, frameScale()));
         box.appendChild(f);
       }
       if (p.numeral) {
@@ -524,6 +524,18 @@ function promptView(p: Prompt, q: Question): HTMLElement {
   return box;
 }
 
+/**
+ * Hearts in the Haus der verliebten Zahlen, beads everywhere else.
+ *
+ * Two numbers that make ten are "verliebt" — in love — and that is the
+ * whole idea the house is named after. A heart in a plain addition
+ * frame would be decoration; here it IS the lesson, and a six-year-old
+ * reads it without being told.
+ */
+function counterShape(): 'perle' | 'herz' {
+  return round && round.house.game === 'verliebte-zahlen' ? 'herz' : 'perle';
+}
+
 /** The word picture is 40px at 1x, and wants about a fifth of the screen. */
 function bildScale(): number {
   return Math.max(2, Math.min(8, Math.floor((window.innerHeight * 0.34) / 40)));
@@ -553,7 +565,7 @@ function onAnswer(idx: number, btn: HTMLButtonElement, stageQ: HTMLElement, answ
     if (q.prompt.kind === 'tenframe' && q.prompt.n >= 0) {
       const f = stageQ.querySelector('.tenframe');
       if (f) f.replaceChildren(
-        tenFrameCanvas({ n: q.prompt.n, extra: 10 - q.prompt.n }, frameScale()));
+        tenFrameCanvas({ n: q.prompt.n, extra: 10 - q.prompt.n, shape: counterShape() }, frameScale()));
     }
     setTimeout(() => {
       if (!round) return;
@@ -574,7 +586,7 @@ function onAnswer(idx: number, btn: HTMLButtonElement, stageQ: HTMLElement, answ
   if (q.prompt.kind === 'tenframe' && q.prompt.n >= 0 && Number.isFinite(chosen)) {
     const f = stageQ.querySelector('.tenframe');
     if (f) f.replaceChildren(
-      tenFrameCanvas({ n: q.prompt.n, extra: Math.min(chosen, 10 - q.prompt.n) }, frameScale()));
+      tenFrameCanvas({ n: q.prompt.n, extra: Math.min(chosen, 10 - q.prompt.n), shape: counterShape() }, frameScale()));
   }
   setTimeout(() => {
     if (!round) return;
@@ -586,7 +598,7 @@ function onAnswer(idx: number, btn: HTMLButtonElement, stageQ: HTMLElement, answ
     if (q.prompt.kind === 'tenframe' && q.prompt.n >= 0) {
       const f = stageQ.querySelector('.tenframe');
       if (f) f.replaceChildren(
-        tenFrameCanvas({ n: q.prompt.n, extra: 10 - q.prompt.n }, frameScale()));
+        tenFrameCanvas({ n: q.prompt.n, extra: 10 - q.prompt.n, shape: counterShape() }, frameScale()));
     }
     sayLine('say.tryAgain');
     setTimeout(() => {
