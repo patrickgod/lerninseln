@@ -1089,3 +1089,112 @@ export function boat(seed: number): Sprite {
   }
   return { px: p, ax: cx, ay: baseY + 2 };
 }
+
+// ---------------------------------------------------------- the friends
+//
+// DESIGN.md had the best idea in the whole document and the island
+// rebuild left it behind: *the collectible IS the learning object.*
+//
+// Each pair of numbers that make ten is a pair of small creatures who
+// are friends. Learn the pair properly and the two of them move onto
+// the island and stay there, together, doing something small and idle.
+//
+// The argument for it, in DESIGN.md's own words: looking at the meadow
+// and seeing 6 and 4 sitting together is ITSELF a recall of the fact. A
+// star would have been decoration; this is revision. And the gaps are
+// visible without a single number on screen — five pairs wandering
+// about and one still missing is a progress bar a six-year-old reads
+// without being taught how.
+
+/** A 3x5 digit font. Small enough for a belly, legible at 4x. */
+const DIGITS: string[][] = [
+  ['111', '101', '101', '101', '111'],
+  ['010', '110', '010', '010', '111'],
+  ['111', '001', '111', '100', '111'],
+  ['111', '001', '111', '001', '111'],
+  ['101', '101', '111', '001', '001'],
+  ['111', '100', '111', '001', '111'],
+  ['111', '100', '111', '101', '111'],
+  ['111', '001', '001', '010', '010'],
+  ['111', '101', '111', '101', '111'],
+  ['111', '101', '111', '001', '111'],
+];
+
+/** Draw a number, centred on (cx, cy), in `hex`. */
+export function digits(p: Px, n: number, cx: number, cy: number, hex: string): void {
+  const chars = String(n).split('').map(Number);
+  const w = chars.length * 4 - 1;
+  let x = cx - Math.floor(w / 2);
+  for (const d of chars) {
+    const g = DIGITS[d];
+    for (let j = 0; j < 5; j++) {
+      for (let i = 0; i < 3; i++) {
+        if (g[j][i] === '1') p.set(x + i, cy - 2 + j, hex);
+      }
+    }
+    x += 4;
+  }
+}
+
+/** The six pairs, each with its own colour. */
+export const FREUND_RAMPS = [P.blossom, P.citrus, P.backlit, P.plum, P.foam, P.fruit] as const;
+
+/**
+ * A Zahlenfreund: a small round creature with its number on its front.
+ *
+ * Deliberately NOT an animal. The island already has a sheep, a fox and
+ * a cat, and a seventh animal would just be more livestock — these have
+ * to read as a different KIND of thing, because they mean something
+ * different. So: round, two big eyes, a leaf on top, and a number.
+ */
+export function zahlenfreund(n: number, pair: number, frame = 0): Sprite {
+  // Smaller than a house and bigger than a hen: they are characters,
+  // not livestock, and they have to be legible enough to read a number
+  // off without becoming the biggest thing on the island.
+  const p = new Px(22, 26);
+  const baseY = p.h - 1 - TILE_H / 2;
+  const cx = 11;
+  const ramp = FREUND_RAMPS[pair % FREUND_RAMPS.length];
+  const bob = frame === 1 ? 1 : 0;
+
+  // feet
+  p.ellipse(cx - 4, baseY, 2, 1, shade(ramp, 1));
+  p.ellipse(cx + 4, baseY, 2, 1, shade(ramp, 1));
+
+  // body: a rounded pebble, a touch taller than it is wide
+  const top = baseY - 15 + bob;
+  for (let y = 0; y <= 14; y++) {
+    const k = y / 14;
+    const w = Math.round(6.5 * Math.sin(Math.min(1, 0.18 + k * 0.9) * Math.PI * 0.86));
+    for (let x = -w; x <= w; x++) {
+      const lit = x + y * 0.4 < -w * 0.4 ? 3 : x - y * 0.3 > w * 0.35 ? 1 : 2;
+      p.set(cx + x, top + y, shade(ramp, lit));
+    }
+  }
+
+  // a pale belly patch, so the number has something to sit on
+  p.ellipse(cx, baseY - 5 + bob, 6, 4, shade(ramp, 4));
+  digits(p, n, cx, baseY - 5 + bob, INK);
+
+  // eyes: big, and set wide, which is the whole difference between a
+  // creature and a bean
+  for (const dx of [-3, 3]) {
+    p.ellipse(cx + dx, baseY - 11 + bob, 2, 2, shade(P.plaster, 4));
+    p.set(cx + dx, baseY - 11 + bob, INK);
+    p.set(cx + dx - 1, baseY - 12 + bob, shade(P.plaster, 4));
+  }
+  // a small smile
+  p.set(cx - 1, baseY - 8 + bob, INK);
+  p.set(cx, baseY - 8 + bob, INK);
+  p.set(cx + 1, baseY - 8 + bob, INK);
+  p.set(cx - 2, baseY - 9 + bob, INK);
+  p.set(cx + 2, baseY - 9 + bob, INK);
+
+  // a leaf on top, because everything on this island grows
+  p.ellipse(cx + 2, top - 2, 3, 2, shade(P.leaf, 3));
+  p.set(cx, top - 1, shade(P.timber, 1));
+
+  finish(p);
+  contact(p, cx, baseY + 1, 16, 8);
+  return { px: p, ...anchor(p) };
+}

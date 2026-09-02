@@ -215,6 +215,62 @@ export function butterflies(time: number, placed: Placed[]): Flyer[] {
   return out;
 }
 
+export interface Freund {
+  /** The number on its front. */
+  n: number;
+  /** Which pair it belongs to, for the colour. */
+  pair: number;
+  x: number;
+  y: number;
+  frame: number;
+}
+
+/**
+ * The Zahlenfreunde, wandering near the house they came out of.
+ *
+ * They move as PAIRS and they never separate: the second one follows
+ * the first at a fixed offset, half a tile behind. That is the entire
+ * point — a child looking at the island and seeing the 6 and the 4
+ * walking together has just recalled the fact without being asked.
+ *
+ * They keep near their house rather than roaming the island, so that
+ * the Haus der verliebten Zahlen slowly gathers a little crowd. It is
+ * the progress bar, and it has no numbers on it.
+ */
+export function freunde(
+  home: { x: number; y: number }, time: number, paare: number[],
+): Freund[] {
+  const out: Freund[] = [];
+  const count = Math.max(1, paare.length);
+  paare.forEach((n, i) => {
+    // Each pair gets its OWN corner of the ground around the house,
+    // spread around a ring. The first version sent every pair pottering
+    // about the same spot and they piled up on each other and on the
+    // house — six creatures in a heap is not six friendships, it is a
+    // sprite bug.
+    const a = (i / count) * Math.PI * 2 + 0.6;
+    const hx = home.x + Math.cos(a) * 2.4;
+    const hy = home.y + 1.1 + Math.sin(a) * 1.7;
+    const s = potter(hx, hy, 7000 + n * 131, time, 26 + i * 5, 0.7);
+
+    // A slow bob, so they are never completely still even between
+    // bouts — a creature that freezes solid reads as a statue.
+    const frame = Math.floor(time * 1.6 + i) % 2;
+    out.push({ n, pair: n, x: s.x, y: s.y, frame });
+
+    // The partner, standing beside them and never further. They are a
+    // PAIR: the whole point is seeing the six and the four together.
+    out.push({
+      n: 10 - n,
+      pair: n,
+      x: s.x + 0.95,
+      y: s.y + 0.06,
+      frame: Math.floor(time * 1.6 + i + 0.5) % 2,
+    });
+  });
+  return out;
+}
+
 /**
  * Fireflies, after dark.
  *

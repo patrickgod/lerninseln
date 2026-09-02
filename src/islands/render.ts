@@ -354,6 +354,11 @@ export function draw(
   // been built, so it costs nothing to compute afresh every frame.
   const alive = life.critters(o.islandId, o.time, placed, trees.length);
 
+  // The Zahlenfreunde gather around the house they came out of. Only
+  // on the island that house is on, obviously.
+  const vz = houses.find((hh) => hh.game === 'verliebte-zahlen');
+  const freunde = vz ? life.freunde(vz, o.time, state.bekanntePaare()) : [];
+
   // TWO PASSES, and the reason is the coastline.
   //
   // In one pass, the sea tile in FRONT of a coastal land tile is drawn
@@ -504,6 +509,13 @@ export function draw(
         const cs = tileToScreen(v, c.x, c.y);
         const b = decoSprite(c.art, c.seed % 97 + 1);
         ctx.drawImage(b.c, Math.round(cs.sx - b.ax), Math.round(cs.sy - LIFT - b.ay));
+      }
+      for (const f of freunde) {
+        if (Math.round(f.x) !== x || Math.round(f.y) !== y) continue;
+        const fs = tileToScreen(v, f.x, f.y);
+        const b = bake(`vz:${f.n}:${f.pair}:${f.frame}`,
+          () => S.zahlenfreund(f.n, f.pair, f.frame));
+        ctx.drawImage(b.c, Math.round(fs.sx - b.ax), Math.round(fs.sy - LIFT - b.ay));
       }
     }
   }

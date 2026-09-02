@@ -34,6 +34,7 @@ const DE = {
   'island.locked': 'Noch verschlossen',
   'island.needStars': 'Du brauchst {n} Sterne',
   'island.newHouse': 'Ein neues Haus ist da!',
+  'island.newFriend': 'Neue Zahlenfreunde: {a} und {b}!',
   'island.tapHouse': 'Tippe auf ein Haus',
   'island.pickHouse': 'Wähle ein Haus, um zu starten',
   'island.fromStars': 'ab {n} Sternen',
@@ -123,6 +124,7 @@ const DE = {
   'say.tryAgain2': 'Fast! Schau, so ist es richtig.',
   'say.tryAgain3': 'Kein Problem. Hier ist die passende Zahl.',
   'say.newHouse': 'Schau mal! Ein neues Haus ist auf deine Insel gekommen.',
+  'say.newFriend': 'Zwei Zahlen haben sich gefunden! Sie wohnen jetzt auf deiner Insel.',
   'say.build': 'Jetzt kannst du deine Insel schöner machen.',
 
   // ------------------------------------------------------- currencies

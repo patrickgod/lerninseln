@@ -824,12 +824,19 @@ function onAnswer(idx: number, btn: HTMLButtonElement, stageQ: HTMLElement, answ
 function finishRound(): void {
   if (!round) return;
   const before = state.get().stars;
+  const paareVorher = state.bekanntePaare();
   const stars = round.right;
   const perfect = round.right === round.qs.length;
   const candy = round.right + (perfect ? 5 : 2);
   state.addStars(stars);
   state.addCandy(candy);
   const after = state.get().stars;
+
+  // Did a PAIR come good? Both directions at full strength is the whole
+  // definition, so this is the moment two numbers become friends — and
+  // it is worth more of a fuss than a house, because it is the thing
+  // the app is actually for.
+  const neuePaare = state.bekanntePaare().filter((n) => !paareVorher.includes(n));
 
   // Did a house arrive? Announce it exactly once, and let the island
   // itself do the announcing rather than a dialog.
@@ -875,6 +882,17 @@ function finishRound(): void {
   row.appendChild(button(t('round.toIsland'), () => {
     round = null;
     screen = 'island';
+    if (neuePaare.length) {
+      // Announced before the house, because it is the better news.
+      const n = neuePaare[0];
+      toast(t('island.newFriend', { a: n, b: 10 - n }));
+      setTimeout(() => {
+        audio.sparkle(6);
+        fx.burst('herz', window.innerWidth / 2, window.innerHeight / 2,
+          { n: 18, speed: 190, up: 0.8, life: 1.1 });
+        if (!arrived.length) sayLine('say.newFriend');
+      }, 320);
+    }
     if (arrived.length) {
       arriving = arrived[0].id;
       arrivingUntil = performance.now() + 2400;

@@ -204,6 +204,26 @@ export function hasSeen(id: string): boolean {
   return state.seen.includes(id);
 }
 
+/**
+ * The pairs of numbers that make ten and are known BOTH ways.
+ *
+ * Both ways on purpose: 7 -> 3 and 3 -> 7 are different retrievals to a
+ * beginner even though they are the same fact to us, and a child who
+ * can do one and not the other has not learned the pair. So a pair only
+ * counts when both of its facts have reached full strength — which is
+ * three correct answers in a row, each.
+ *
+ * Returns the smaller number of each pair: 0 for 0+10, 3 for 3+7, and
+ * 5 for 5+5, which is its own partner.
+ */
+export function bekanntePaare(): number[] {
+  const out: number[] = [];
+  for (let n = 0; n <= 5; n++) {
+    if (strengthOf(`vz:${n}`) >= 3 && strengthOf(`vz:${10 - n}`) >= 3) out.push(n);
+  }
+  return out;
+}
+
 export function reset(): void {
   storage.clear();
   state = fresh();

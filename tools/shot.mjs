@@ -189,6 +189,32 @@ if (want('leben')) {
   }
 }
 
+// The Zahlenfreunde: pairs of numbers that make ten, known both ways,
+// wandering by the house they came out of.
+if (want('freunde')) {
+  await page.goto(`http://localhost:${PORT}/`);
+  await page.evaluate(() => {
+    const strength = {};
+    // Four pairs fully mastered, both directions, and two not.
+    for (const n of [1, 3, 4, 5, 9, 7, 6]) strength['vz:' + n] = 3;
+    strength['vz:2'] = 1;
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+      v: 1, stars: 60, candy: 40, seen: [], placed: [], strength,
+      sound: true, voice: false,
+    }));
+  });
+  await page.reload();
+  await page.waitForTimeout(900);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(3200);
+  await page.evaluate(() => {
+    const l = document.querySelector('.labels');
+    if (l) l.style.display = 'none';
+  });
+  await page.waitForTimeout(200);
+  await shot('freunde');
+}
+
 await browser.close();
 server.close();
 console.log('done');
