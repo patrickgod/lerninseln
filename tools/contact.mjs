@@ -92,6 +92,7 @@ names.forEach((name, i) => {
 if (doIt('insel')) {
   await sheet('inselsprites', `
 import * as S from '../src/islands/sprites.js';
+import * as D from '../src/islands/deko.js';
 import { P } from '../src/core/palette.js';
 
 // Drawn at the scale the island actually uses, on the ground tile they
@@ -124,6 +125,20 @@ const items: [string, () => S.Sprite][] = [
   ['boot', () => S.boat(7)],
   ['vogel', () => S.bird(0)],
   ['falter', () => S.butterfly(0, 1)],
+  ['birnbaum', () => S.pearTree(4)],
+  ['pflaumenbaum', () => S.plumTree(6)],
+  ['beerenbusch', () => D.berryBush(3)],
+  ['hecke', () => D.hedge(2)],
+  ['sonnenblumen', () => D.sunflowers(5)],
+  ['kuerbisse', () => D.pumpkins(7)],
+  ['pilze', () => D.mushrooms(9)],
+  ['bienenstock', () => D.beehive()],
+  ['vogelhaus', () => D.birdBox()],
+  ['feuerstelle', () => D.campfire(0)],
+  ['windmuehle', () => D.windmill(2)],
+  ['biene', () => D.bee(0)],
+  ['freund-3', () => S.zahlenfreund(3, 3)],
+  ['freund-7', () => S.zahlenfreund(7, 3)],
 ];
 
 const rows = Math.ceil(items.length / COLS);

@@ -39,11 +39,29 @@ export const DECOR: DecoDef[] = [
   { id: 'katze', nameKey: 'deco.katze', price: 22, art: 'cat', group: 'tier' },
   { id: 'fuchs', nameKey: 'deco.fuchs', price: 30, art: 'fox', group: 'tier' },
 
+  // ------------------------------------------------------- the orchard
+  { id: 'birnbaum', nameKey: 'deco.birnbaum', price: 14, art: 'pear', group: 'baum' },
+  { id: 'pflaumenbaum', nameKey: 'deco.pflaumenbaum', price: 16, art: 'plum', group: 'baum' },
+  { id: 'beerenbusch', nameKey: 'deco.beerenbusch', price: 9, art: 'berry', group: 'baum' },
+  { id: 'hecke', nameKey: 'deco.hecke', price: 6, art: 'hedge', group: 'garten' },
+  { id: 'sonnenblumen', nameKey: 'deco.sonnenblumen', price: 11, art: 'sunflowers', group: 'garten' },
+  { id: 'kuerbisse', nameKey: 'deco.kuerbisse', price: 13, art: 'pumpkins', group: 'garten' },
+  { id: 'pilze', nameKey: 'deco.pilze', price: 5, art: 'mushrooms', group: 'garten' },
+
   // ---------------------------------------------------------- village
   { id: 'laterne', nameKey: 'deco.laterne', price: 8, art: 'lamp', group: 'bau' },
   { id: 'bank', nameKey: 'deco.bank', price: 10, art: 'bench', group: 'bau' },
   { id: 'brunnen', nameKey: 'deco.brunnen', price: 25, art: 'well', group: 'bau' },
   { id: 'leuchtturm', nameKey: 'deco.leuchtturm', price: 60, art: 'lighthouse', group: 'bau' },
+
+  // Four that CHANGE the island rather than standing on it, which is
+  // why they are priced where they are: the hive brings bees, the box
+  // brings birds even to a treeless island, the fire is the one thing
+  // that is better after dark, and the mill turns.
+  { id: 'bienenstock', nameKey: 'deco.bienenstock', price: 26, art: 'beehive', group: 'tier' },
+  { id: 'vogelhaus', nameKey: 'deco.vogelhaus', price: 20, art: 'birdbox', group: 'tier' },
+  { id: 'feuerstelle', nameKey: 'deco.feuerstelle', price: 18, art: 'campfire', group: 'bau' },
+  { id: 'windmuehle', nameKey: 'deco.windmuehle', price: 75, art: 'windmill', group: 'bau' },
 ];
 
 export function deco(id: string): DecoDef | undefined {

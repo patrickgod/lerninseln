@@ -172,6 +172,8 @@ function woodCentre(islandId: string): { x: number; y: number } | null {
  * none.
  */
 export function birds(islandId: string, time: number, trees: number): Flyer[] {
+  // A bird box counts for a small wood: the whole point of buying one
+  // is that birds come to an island that has not got a wood yet.
   if (trees < 3) return [];
   const home = woodCentre(islandId) ?? { x: (GRID - 1) / 2, y: (GRID - 1) / 2 };
   const out: Flyer[] = [];
@@ -193,6 +195,32 @@ export function birds(islandId: string, time: number, trees: number): Flyer[] {
       frame: Math.floor(time * 6 + i * 0.5) % 2,
       seed: i,
     });
+  }
+  return out;
+}
+
+/**
+ * Bees, if somebody keeps them.
+ *
+ * They stay tight around the hive and move fast, which is the opposite
+ * of everything else on the island and is exactly why they read as
+ * bees rather than as small birds.
+ */
+export function bees(time: number, placed: Placed[]): Flyer[] {
+  const out: Flyer[] = [];
+  for (const p of placed) {
+    if (p.d !== 'bienenstock') continue;
+    for (let i = 0; i < 3; i++) {
+      const a = time * (1.5 + i * 0.4) + i * 2.4;
+      const r = 0.5 + hash(i * 313) * 0.5;
+      out.push({
+        x: p.x + Math.cos(a) * r,
+        y: p.y + Math.sin(a * 1.3) * r * 0.7,
+        h: 16 + Math.sin(time * 3 + i * 2) * 7,
+        frame: Math.floor(time * 14 + i) % 2,
+        seed: i,
+      });
+    }
   }
   return out;
 }

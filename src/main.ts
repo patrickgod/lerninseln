@@ -19,6 +19,7 @@ import {
 import * as render from './islands/render.js';
 import { DECOR, deco } from './islands/decor.js';
 import * as S from './islands/sprites.js';
+import * as D from './islands/deko.js';
 import { buildRound } from './games/games.js';
 import type { Question, Prompt } from './games/types.js';
 import { WOERTER, stem } from './games/woerter.js';
@@ -569,6 +570,17 @@ function decoThumb(art: string): HTMLCanvasElement {
 
 function spriteFor(art: string): S.Sprite {
   switch (art) {
+    case 'pear': return S.pearTree(4);
+    case 'plum': return S.plumTree(6);
+    case 'berry': return D.berryBush(3);
+    case 'hedge': return D.hedge(2);
+    case 'sunflowers': return D.sunflowers(5);
+    case 'pumpkins': return D.pumpkins(7);
+    case 'mushrooms': return D.mushrooms(9);
+    case 'beehive': return D.beehive();
+    case 'birdbox': return D.birdBox();
+    case 'campfire': return D.campfire(0);
+    case 'windmill': return D.windmill(2);
     case 'cherry': return S.cherryTree(7);
     case 'apple': return S.appleTree(11);
     case 'pine': return S.pineTree(3);

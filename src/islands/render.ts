@@ -21,6 +21,7 @@
 import { P, shade, atNight } from '../core/palette.js';
 import { GRID, isLand, isSand, island, unlockedHouses, housesOn, type HouseDef } from './islands.js';
 import * as S from './sprites.js';
+import * as D from './deko.js';
 import * as state from '../core/state.js';
 import { deco } from './decor.js';
 import * as life from './life.js';
@@ -109,8 +110,28 @@ function bake(key: string, make: () => S.Sprite): Baked {
   return out;
 }
 
-/** The sprite a decoration id draws as. */
-function decoSprite(art: string, seed: number): Baked {
+/**
+ * The sprite a decoration id draws as.
+ *
+ * `frame` exists for the handful of decorations that move — the fire
+ * and the windmill — and is folded into the cache key so that an
+ * animated thing is still a blit rather than a redraw.
+ */
+function decoSprite(art: string, seed: number, frame = 0): Baked {
+  switch (art) {
+    case 'pear': return bake(`d:pear:${seed}`, () => S.pearTree(seed));
+    case 'plum': return bake(`d:plum:${seed}`, () => S.plumTree(seed));
+    case 'berry': return bake(`d:berry:${seed}`, () => D.berryBush(seed));
+    case 'hedge': return bake(`d:hedge:${seed}`, () => D.hedge(seed));
+    case 'sunflowers': return bake(`d:sun:${seed}`, () => D.sunflowers(seed));
+    case 'pumpkins': return bake(`d:pump:${seed}`, () => D.pumpkins(seed));
+    case 'mushrooms': return bake(`d:mush:${seed}`, () => D.mushrooms(seed));
+    case 'beehive': return bake('d:hive', () => D.beehive());
+    case 'birdbox': return bake('d:box', () => D.birdBox());
+    case 'campfire': return bake(`d:fire:${frame}`, () => D.campfire(frame));
+    case 'windmill': return bake(`d:mill:${frame}`, () => D.windmill(frame));
+    default: break;
+  }
   return bake(`d:${art}:${seed}`, () => {
     switch (art) {
       case 'cherry': return S.cherryTree(seed);
@@ -493,7 +514,12 @@ export function draw(
       } else if (built) {
         const d = deco(built.d);
         if (d) {
-          const b = decoSprite(d.art, (x * 977 + y * 31) % 97 + 1);
+          // The fire flickers fast and the mill turns slowly; anything
+          // else is a still.
+          const frame = d.art === 'campfire' ? Math.floor(o.time * 7) % 2
+            : d.art === 'windmill' ? Math.floor(o.time * 1.6) % 8
+              : 0;
+          const b = decoSprite(d.art, (x * 977 + y * 31) % 97 + 1, frame);
           ctx.drawImage(b.c, Math.round(sx - b.ax), Math.round(sy - b.ay));
         }
       } else if (tree) {
@@ -529,7 +555,15 @@ export function draw(
     const b = bake(`bfly:${f.frame}:${f.seed % 4}`, () => S.butterfly(f.frame, f.seed % 4));
     ctx.drawImage(b.c, Math.round(fs.sx - b.ax), Math.round(fs.sy - LIFT - f.h - b.ay));
   }
-  for (const f of life.birds(o.islandId, o.time, trees.length)) {
+  for (const f of life.bees(o.time, placed)) {
+    const fs = tileToScreen(v, f.x, f.y);
+    const b = bake(`bee:${f.frame}`, () => D.bee(f.frame));
+    ctx.drawImage(b.c, Math.round(fs.sx - b.ax), Math.round(fs.sy - LIFT - f.h - b.ay));
+  }
+  // A bird box counts as a small wood, so birds come to an island that
+  // has not grown one yet — which is the entire reason to buy one.
+  const boxes = placed.filter((pp) => pp.d === 'vogelhaus').length;
+  for (const f of life.birds(o.islandId, o.time, trees.length + boxes * 4)) {
     const fs = tileToScreen(v, f.x, f.y);
     const b = bake(`bird:${f.frame}`, () => S.bird(f.frame));
     ctx.drawImage(b.c, Math.round(fs.sx - b.ax), Math.round(fs.sy - LIFT - f.h - b.ay));

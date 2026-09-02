@@ -148,6 +148,17 @@ const DE = {
   'deco.laterne': 'Laterne',
   'deco.bank': 'Bank',
   'deco.leuchtturm': 'Leuchtturm',
+  'deco.birnbaum': 'Birnbaum',
+  'deco.pflaumenbaum': 'Pflaumenbaum',
+  'deco.beerenbusch': 'Beerenbusch',
+  'deco.hecke': 'Hecke',
+  'deco.sonnenblumen': 'Sonnenblumen',
+  'deco.kuerbisse': 'Kürbisse',
+  'deco.pilze': 'Pilze',
+  'deco.bienenstock': 'Bienenstock',
+  'deco.vogelhaus': 'Vogelhaus',
+  'deco.feuerstelle': 'Feuerstelle',
+  'deco.windmuehle': 'Windmühle',
 
   // ---------------------------------------------------------- settings
   'set.sound': 'Ton',

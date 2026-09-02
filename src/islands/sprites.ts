@@ -241,29 +241,47 @@ export function cherryTree(seed: number): Sprite {
   return { px: p, ...anchor(p) };
 }
 
-export function appleTree(seed: number): Sprite {
+/**
+ * A fruit tree.
+ *
+ * One generator, three fruits. The apple, the pear and the plum differ
+ * by two arguments, which is the whole reason the sprites are written
+ * in code: a fourth fruit costs one line, and all four are guaranteed
+ * to agree about light, canopy shape and trunk.
+ *
+ * Fruit is two pixels and has to be the most saturated thing on the
+ * tree, or it vanishes into the leaves.
+ */
+export function fruitTree(seed: number, leafRamp: Ramp, fruitRamp: Ramp, n = 7): Sprite {
   const p = new Px(32, 44);
   const baseY = p.h - 1 - TILE_H / 2;
   trunk(p, 16, baseY, 11);
-  canopy(p, 16, baseY - 19, 9, P.leaf, seed);
-  // Fruit is two pixels and it has to be the most saturated thing on
-  // the tree or it vanishes into the leaves.
+  canopy(p, 16, baseY - 19, 9, leafRamp, seed);
   const rn = rand(seed ^ 0x1234);
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < n; i++) {
     const a = rn() * Math.PI * 2, d = Math.sqrt(rn()) * 8;
     const x = 16 + Math.round(Math.cos(a) * d);
     const y = baseY - 19 + Math.round(Math.sin(a) * d * 0.8);
     if (!p.get(x, y)) continue;
-    p.set(x, y, shade(P.fruit, 2));
-    p.set(x, y + 1, shade(P.fruit, 1));
-    p.set(x - 1, y, shade(P.fruit, 3));
+    p.set(x, y, shade(fruitRamp, 2));
+    p.set(x, y + 1, shade(fruitRamp, 1));
+    p.set(x - 1, y, shade(fruitRamp, 3));
   }
   finish(p);
-  // The ground shadow goes on AFTER the rim. Drawn before it, the
-  // ink outline traces the shadow itself and every tree stands in a
-  // little black box — which is exactly what the first build did.
   contact(p, 16, baseY + 1);
   return { px: p, ...anchor(p) };
+}
+
+export function appleTree(seed: number): Sprite {
+  return fruitTree(seed, P.leaf, P.fruit, 7);
+}
+
+export function pearTree(seed: number): Sprite {
+  return fruitTree(seed, P.backlit, P.citrus, 6);
+}
+
+export function plumTree(seed: number): Sprite {
+  return fruitTree(seed, P.pine, P.plum, 9);
 }
 
 export function pineTree(seed: number): Sprite {
@@ -1172,8 +1190,12 @@ export function zahlenfreund(n: number, pair: number, frame = 0): Sprite {
     }
   }
 
-  // a pale belly patch, so the number has something to sit on
-  p.ellipse(cx, baseY - 5 + bob, 6, 4, shade(ramp, 4));
+  // A near-WHITE belly patch, not just the top of the creature's own
+  // ramp. The number is the whole point of the sprite, and on a light
+  // purple belly a dark purple digit is a smudge — it has to be the
+  // strongest contrast on the island.
+  p.ellipse(cx, baseY - 5 + bob, 7, 4, shade(P.plaster, 4));
+  p.ellipse(cx, baseY - 6 + bob, 6, 3, shade(P.plaster, 4));
   digits(p, n, cx, baseY - 5 + bob, INK);
 
   // eyes: big, and set wide, which is the whole difference between a
