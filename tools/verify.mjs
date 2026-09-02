@@ -300,6 +300,63 @@ await page.evaluate(() => {
   localStorage.setItem('lerninseln.save.v1', JSON.stringify({ ...raw, sound: true }));
 });
 
+// --------------------------------------------------------- frame time
+//
+// IPAD.md sets the budget at 60fps on an iPad from about 2019. This is
+// NOT that measurement and must not be mistaken for it: headless
+// Chromium rasterises in software, and Tidegarden already learned the
+// hard way that the biggest performance bug in a pixel-art renderer can
+// be completely invisible to a software rasteriser.
+//
+// What this DOES catch is the mistake that would ruin the frame on any
+// machine — an accidental quadratic in the per-tile loops as the island
+// fills up with decorations. So: fill one, run it, and fail if a frame
+// takes longer than a thirtieth of a second.
+
+await page.goto(BASE);
+await page.evaluate(() => {
+  // A heavily built island: forty things, every kind of ambient life.
+  const placed = [];
+  const kinds = ['kirschbaum', 'apfelbaum', 'teich', 'zaun', 'beet', 'blumenbeet',
+    'bank', 'laterne', 'huhn', 'hecke', 'sonnenblumen', 'bienenstock',
+    'vogelhaus', 'feuerstelle', 'pilze', 'beerenbusch'];
+  let k = 0;
+  for (let x = 3; x < 14; x++) {
+    for (let y = 3; y < 14; y++) {
+      if ((x + y) % 3) continue;
+      placed.push({ d: kinds[k++ % kinds.length], i: 'mathe', x, y });
+    }
+  }
+  const strength = {};
+  for (let n = 0; n <= 10; n++) strength['vz:' + n] = 3;
+  localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+    v: 1, stars: 200, candy: 0, seen: [], placed, strength,
+    sound: false, voice: false, name: '',
+  }));
+});
+await page.reload();
+await page.waitForTimeout(700);
+await page.locator('.island-card').first().tap();
+await page.waitForTimeout(1200);
+
+const frames = await page.evaluate(() => new Promise((resolve) => {
+  const times = [];
+  let last = performance.now();
+  let n = 0;
+  const tick = () => {
+    const now = performance.now();
+    times.push(now - last);
+    last = now;
+    if (++n < 140) requestAnimationFrame(tick);
+    else resolve(times.slice(20).sort((a, b) => a - b));
+  };
+  requestAnimationFrame(tick);
+}));
+const median = frames[Math.floor(frames.length / 2)];
+const worst = frames[frames.length - 1];
+check('a busy island still draws a frame in under 33ms',
+  median < 33, `median ${median.toFixed(1)}ms, worst ${worst.toFixed(1)}ms`);
+
 // ------------------------------------------------------------ offline
 //
 // The real test of the service worker. One visit, then the network is

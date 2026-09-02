@@ -23,6 +23,7 @@ const DE = {
   // ------------------------------------------------------ island pick
   'islands.title': 'Wähle eine Insel',
   'islands.titleNamed': 'Die Inseln von {name}',
+  'islands.lead': 'Auf jeder Insel stehen Häuser. In jedem Haus warten Aufgaben.',
   'island.mathe': 'Die Insel der Zahlen',
   'island.mathe.sub': 'Rechnen, zählen, Zahlen finden',
   'island.sprache': 'Die Insel der Sprache',

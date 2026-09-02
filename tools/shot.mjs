@@ -277,6 +277,37 @@ if (want('einstellungen')) {
   await shot('postkarte');
 }
 
+// PORTRAIT. IPAD.md: "Both orientations, or lock one. Decide, do not
+// leave it to chance." A child holds a tablet whichever way it happens
+// to be, and a layout that only works one way round is a layout that
+// fails half the time.
+if (want('hoch')) {
+  const tall = await browser.newContext({
+    hasTouch: true, isMobile: true,
+    viewport: { width: 810, height: 1080 }, deviceScaleFactor: 2,
+  });
+  const tp = await tall.newPage();
+  await tp.goto(`http://localhost:${PORT}/`);
+  await tp.evaluate(() => {
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+      v: 1, stars: 120, candy: 300, seen: [], placed: [], strength: {},
+      sound: true, voice: false, name: '',
+    }));
+  });
+  await tp.reload();
+  await tp.waitForTimeout(900);
+  await tp.screenshot({ path: 'shots/hoch-picker.png' });
+  await tp.locator('.island-card').first().tap();
+  await tp.waitForTimeout(1200);
+  await tp.screenshot({ path: 'shots/hoch-insel.png' });
+  const b = await tp.locator('#stage').boundingBox();
+  await tp.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2 + 10);
+  await tp.waitForTimeout(1200);
+  await tp.screenshot({ path: 'shots/hoch-runde.png' });
+  console.log('  shots/hoch-*.png');
+  await tall.close();
+}
+
 await browser.close();
 server.close();
 console.log('done');

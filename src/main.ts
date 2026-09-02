@@ -211,16 +211,45 @@ function centreOf(e: Element): { x: number; y: number } {
 function placeLabels(): void {
   if (!houseLabels.size) return;
   const seen = new Set<string>();
+
+  // Work out where each label wants to be, then push them apart.
+  const want: { el: HTMLDivElement; x: number; y: number; w: number; h: number }[] = [];
   for (const hit of houseHits) {
     const label = houseLabels.get(hit.house.id);
     if (!label) continue;
     seen.add(hit.house.id);
-    label.style.left = `${Math.round(hit.x + hit.w / 2)}px`;
-    // Tucked right under the doorstep, so the label sits on the tile
-    // the house occupies rather than on the free ground in front of it.
-    label.style.top = `${Math.round(hit.y + hit.h - 14)}px`;
     label.style.visibility = 'visible';
+    const r = label.getBoundingClientRect();
+    want.push({
+      el: label,
+      x: Math.round(hit.x + hit.w / 2),
+      // Tucked right under the doorstep, so the label sits on the tile
+      // the house occupies rather than on the free ground in front.
+      y: Math.round(hit.y + hit.h - 14),
+      w: r.width || 160,
+      h: r.height || 34,
+    });
   }
+
+  // Two houses on neighbouring tiles put their labels on top of each
+  // other, and in portrait — where the island draws at a smaller zoom —
+  // four of them stacked into an unreadable pile. Nudging the lower one
+  // down is enough: the eye still associates it with the nearest house,
+  // and nothing is hidden.
+  want.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < want.length; i++) {
+    for (let j = 0; j < i; j++) {
+      const a = want[j], b = want[i];
+      const overlapX = Math.abs(a.x - b.x) < (a.w + b.w) / 2 - 6;
+      const overlapY = b.y < a.y + a.h + 2;
+      if (overlapX && overlapY) b.y = a.y + a.h + 4;
+    }
+  }
+  for (const w of want) {
+    w.el.style.left = `${w.x}px`;
+    w.el.style.top = `${w.y}px`;
+  }
+
   // A house that did not draw this frame — scrolled off, or not there —
   // must not leave its label stranded in the corner.
   for (const [id, label] of houseLabels) {
@@ -473,6 +502,11 @@ function showPicker(): void {
   const who = state.get().name;
   wrap.appendChild(el('h1', undefined,
     who ? t('islands.titleNamed', { name: who }) : t('islands.title')));
+  // One line under the title, because the voice says the same thing and
+  // a grown-up sitting next to the child should be able to read what
+  // this is without being told. Patrick: "einen ganz kurzen erklärtext
+  // zusätzlich zu der stimme".
+  wrap.appendChild(el('p', 'lead', t('islands.lead')));
 
   const cards = el('div', 'cards');
   for (const def of ISLANDS) {

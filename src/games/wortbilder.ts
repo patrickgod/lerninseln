@@ -306,6 +306,201 @@ export function zitrone(): Px {
   return finish(p);
 }
 
+
+// ------------------------------------------------- the second dozen
+//
+// Chosen for their INITIALS as much as for being drawable. The first
+// twelve covered A B E F H I K M R S U Z; these add D G L N P T V W and
+// take the Haus der ersten Laute from twelve words to twenty, which is
+// the difference between a child meeting the same picture every other
+// question and meeting a new one most times.
+
+export function dose(): Px {
+  const p = frame();
+  // A tin: a cylinder, which at forty pixels means an ellipse on top,
+  // straight sides, and a band round the middle to say "label".
+  p.ellipse(20, 12, 11, 4, shade(P.stone, 4));
+  for (let y = 12; y <= 30; y++) {
+    for (let x = -11; x <= 11; x++) {
+      const lit = x < -5 ? 3 : x > 5 ? 1 : 2;
+      p.set(20 + x, y, shade(P.stone, lit));
+    }
+  }
+  p.ellipse(20, 30, 11, 4, shade(P.stone, 1));
+  p.ellipse(20, 11, 8, 3, shade(P.stone, 3));
+  // the label
+  for (let y = 17; y <= 26; y++) {
+    for (let x = -11; x <= 11; x++) {
+      const lit = x < -5 ? 3 : x > 5 ? 1 : 2;
+      p.set(20 + x, y, shade(P.fruit, lit));
+    }
+  }
+  p.ellipse(18, 21, 4, 3, shade(P.glow, 3));
+  return finish(p);
+}
+
+export function gabel(): Px {
+  const p = frame();
+  // Four tines, a neck, a handle. The gaps BETWEEN the tines are the
+  // whole silhouette, so they are two pixels wide, not one.
+  for (const dx of [-6, -2, 2, 6]) {
+    for (let y = 5; y <= 15; y++) p.set(20 + dx, y, shade(P.wool, 3));
+    p.set(20 + dx + 1, 5, shade(P.wool, 4));
+  }
+  p.rect(13, 15, 15, 4, shade(P.wool, 3));
+  p.rect(13, 15, 15, 1, shade(P.wool, 4));
+  for (let y = 19; y <= 24; y++) {
+    const w = Math.round(4 - (y - 19) * 0.3);
+    for (let x = -w; x <= w; x++) p.set(20 + x, y, shade(P.wool, x < 0 ? 3 : 2));
+  }
+  for (let y = 24; y <= 35; y++) {
+    for (let x = -3; x <= 3; x++) p.set(20 + x, y, shade(P.wool, x < 0 ? 3 : 2));
+  }
+  p.ellipse(20, 35, 3, 2, shade(P.wool, 2));
+  return finish(p);
+}
+
+export function lampe(): Px {
+  const p = frame();
+  // A table lamp: a trapezoid shade, a stem, a foot, and light coming
+  // OUT of the bottom of the shade — which is what stops it reading as
+  // a plant pot.
+  for (let j = 0; j <= 11; j++) {
+    const w = 5 + j;
+    for (let i = -w; i <= w; i++) {
+      p.set(20 + i, 6 + j, shade(P.terracotta, i < -w * 0.3 ? 3 : i > w * 0.4 ? 1 : 2));
+    }
+  }
+  for (let i = -16; i <= 16; i++) p.set(20 + i, 18, shade(P.glow, 4));
+  for (let i = -13; i <= 13; i++) p.set(20 + i, 19, shade(P.glow, 3));
+  for (let y = 19; y <= 31; y++) {
+    p.set(19, y, shade(P.timber, 2));
+    p.set(20, y, shade(P.timber, 1));
+  }
+  p.ellipse(20, 33, 8, 3, shade(P.timber, 2));
+  p.ellipse(19, 32, 6, 2, shade(P.timber, 3));
+  return finish(p);
+}
+
+export function nest(): Px {
+  const p = frame();
+  // A bowl of twigs with three eggs in it. The twigs are drawn as
+  // individual strokes rather than as a filled shape, which is the
+  // difference between a nest and a bread roll.
+  p.ellipse(20, 24, 15, 8, shade(P.timber, 2));
+  p.ellipse(20, 22, 12, 5, shade(P.timber, 0));
+  for (let i = 0; i < 26; i++) {
+    const a = (i / 26) * Math.PI * 2;
+    const x = 20 + Math.round(Math.cos(a) * 15);
+    const y = 24 + Math.round(Math.sin(a) * 8);
+    p.line(x, y, x + Math.round(Math.cos(a + 1.2) * 4), y + Math.round(Math.sin(a + 1.2) * 2),
+      shade(P.timber, i % 3 === 0 ? 3 : i % 3 === 1 ? 2 : 1));
+  }
+  // Three eggs, and they have to stay THREE. The first version drew
+  // them big and overlapping and they merged into one white blob — a
+  // nest with a dumpling in it. Smaller, spaced, and each one ringed
+  // with its own shaded step so the eye can separate them.
+  for (const [ex, ey] of [[14, 21], [25, 21], [20, 25]] as [number, number][]) {
+    p.ellipse(ex, ey, 4, 3, shade(P.plaster, 1));
+    p.ellipse(ex, ey, 3, 2, shade(P.plaster, 3));
+    p.ellipse(ex - 1, ey - 1, 2, 1, shade(P.plaster, 4));
+  }
+  return finish(p);
+}
+
+export function pilz(): Px {
+  const p = frame();
+  // One big one, so it is unmistakably a mushroom rather than a patch
+  // of them — this is a word card, not a decoration.
+  for (let y = 20; y <= 33; y++) {
+    const w = Math.round(4 + (y - 20) * 0.25);
+    for (let x = -w; x <= w; x++) {
+      p.set(20 + x, y, shade(P.plaster, x < -w * 0.3 ? 4 : x > w * 0.4 ? 2 : 3));
+    }
+  }
+  for (let i = -15; i <= 15; i++) p.set(20 + i, 20, shade(P.plaster, 1));
+  for (let j = 0; j <= 12; j++) {
+    const w = Math.round(15 * Math.sqrt(Math.max(0, 1 - (j / 13) ** 2)));
+    for (let i = -w; i <= w; i++) {
+      p.set(20 + i, 19 - j, shade(P.fruit, i < -w * 0.3 ? 3 : i > w * 0.4 ? 1 : 2));
+    }
+  }
+  for (const [sx, sy, r] of [[14, 12, 3], [24, 14, 2], [20, 8, 2]] as [number, number, number][]) {
+    p.ellipse(sx, sy, r, r - 1, shade(P.plaster, 4));
+  }
+  return finish(p);
+}
+
+export function tisch(): Px {
+  const p = frame();
+  // Seen slightly from above so the top is a parallelogram — a table
+  // drawn flat-on is a plank on sticks.
+  for (let j = 0; j <= 5; j++) {
+    for (let i = -16 + j; i <= 16 - j; i++) {
+      p.set(20 + i, 12 + j, shade(P.timber, j < 2 ? 4 : 3));
+    }
+  }
+  for (let i = -14; i <= 14; i++) p.set(20 + i, 18, shade(P.timber, 1));
+  for (const dx of [-12, -8, 8, 12]) {
+    const front = Math.abs(dx) < 10;
+    for (let y = 18; y <= (front ? 34 : 30); y++) {
+      p.set(20 + dx, y, shade(P.timber, dx < 0 ? 3 : 1));
+      p.set(20 + dx + 1, y, shade(P.timber, dx < 0 ? 2 : 0));
+    }
+  }
+  return finish(p);
+}
+
+export function vogel(): Px {
+  const p = frame();
+  // Perched, in profile: a round body, a small head, a beak, a tail and
+  // one leg. The tail and the beak pointing opposite ways is what makes
+  // it read instantly.
+  p.ellipse(19, 22, 10, 8, shade(P.chalk, 2));
+  p.ellipse(16, 19, 7, 5, shade(P.chalk, 3));
+  p.ellipse(16, 17, 4, 3, shade(P.chalk, 4));
+  p.ellipse(11, 14, 5, 5, shade(P.chalk, 3));
+  p.ellipse(10, 12, 3, 3, shade(P.chalk, 4));
+  // beak
+  p.rect(3, 13, 5, 2, shade(P.citrus, 3));
+  p.set(3, 15, shade(P.citrus, 2));
+  p.set(10, 13, INK);
+  // wing
+  p.ellipse(21, 22, 6, 4, shade(P.chalk, 1));
+  p.ellipse(20, 21, 4, 2, shade(P.chalk, 2));
+  // tail
+  for (let k = 0; k < 8; k++) {
+    for (let j = -2; j <= 2; j++) p.set(28 + k, 24 + j + Math.round(k * 0.4), shade(P.chalk, 1));
+  }
+  // leg
+  for (let y = 29; y <= 34; y++) p.set(17, y, shade(P.citrus, 2));
+  p.line(15, 35, 20, 35, shade(P.citrus, 2));
+  return finish(p);
+}
+
+export function wolke(): Px {
+  const p = frame();
+  // Overlapping discs with a FLAT bottom. A cloud that is round
+  // underneath is a sheep.
+  const blobs: [number, number, number][] = [
+    [13, 22, 8], [21, 19, 10], [29, 23, 7], [24, 25, 8],
+  ];
+  for (const [x, y, r] of blobs) p.ellipse(x, y, r, r, shade(P.wool, 3));
+  for (let x = 5; x <= 36; x++) {
+    for (let y = 27; y <= 31; y++) {
+      if (p.get(x, y)) p.set(x, y, shade(P.wool, 2));
+    }
+  }
+  for (let x = 5; x <= 36; x++) {
+    if (p.get(x, 30) || p.get(x, 29)) { p.set(x, 30, shade(P.wool, 2)); p.clear(x, 31); }
+  }
+  for (const [x, y, r] of blobs) {
+    p.ellipse(x - Math.round(r * 0.3), y - Math.round(r * 0.4),
+      Math.round(r * 0.55), Math.round(r * 0.45), shade(P.wool, 4));
+  }
+  return finish(p);
+}
+
 /**
  * The words that have a picture.
  *
@@ -329,6 +524,14 @@ export const BILDER: Record<string, () => Px> = {
   Sonne: sonne,
   Uhr: uhr,
   Zitrone: zitrone,
+  Dose: dose,
+  Gabel: gabel,
+  Lampe: lampe,
+  Nest: nest,
+  Pilz: pilz,
+  Tisch: tisch,
+  Vogel: vogel,
+  Wolke: wolke,
 };
 
 export function hasBild(wort: string): boolean {
