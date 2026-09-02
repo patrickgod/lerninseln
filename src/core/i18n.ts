@@ -76,24 +76,53 @@ const DE = {
   // The prompts a house speaks when it opens. These are the lines the
   // voice actually says, so they are short, warm, and contain the whole
   // instruction — a child who cannot read has only this.
-  'say.pickIsland': 'Hallo! Such dir eine Insel aus.',
+  // The lines the voice speaks.
+  //
+  // Two versions of every house greeting, and the reason is that a
+  // child will hear these a hundred times. The `.erst` line is the
+  // full explanation and plays only the first time that house is ever
+  // opened; after that it is the short one. A warm sentence is warm
+  // the first time and wearing by the twentieth, and an app that
+  // explains the rules again every single visit is talking down to the
+  // child who has just learned them.
+  //
+  // Praise comes in three, picked at random, for the same reason.
+  'say.pickIsland': 'Hallo! Schön, dass du da bist. Such dir eine Insel aus.',
   'say.pickHouse': 'Tippe auf ein Haus, dann geht es los.',
   'say.mathe': 'Die Insel der Zahlen. Hier wohnen die Zahlen.',
   'say.sprache': 'Die Insel der Sprache. Hier wohnen die Wörter.',
-  'say.verliebteZahlen':
-    'Willkommen im Haus der verliebten Zahlen. Zwei Zahlen sind verliebt, wenn sie zusammen zehn ergeben. Tippe auf die passende Zahl.',
-  'say.zahlenreihe':
-    'Willkommen im Haus der Nachbarzahlen. Welche Zahl fehlt in der Reihe? Tippe sie an.',
-  'say.rechenmeister':
-    'Willkommen im Haus der Rechenmeister. Rechne die Aufgabe und tippe auf das Ergebnis.',
-  'say.zwillinge':
-    'Willkommen im Haus der Zwillinge. Verdopple die Zahl und tippe auf das Ergebnis.',
-  'say.anlaute':
-    'Willkommen im Haus der ersten Laute. Höre gut hin. Mit welchem Buchstaben fängt das Wort an?',
-  'say.silben':
-    'Willkommen im Haus der Silben. Klatsche das Wort. Wie viele Silben hat es?',
-  'say.wellDone': 'Das hast du toll gemacht.',
-  'say.tryAgain': 'Schau mal, so geht es.',
+
+  'say.verliebteZahlenErst':
+    'Willkommen im Haus der verliebten Zahlen! Zwei Zahlen sind verliebt, wenn sie zusammen zehn ergeben. Die drei und die sieben zum Beispiel. Tippe einfach auf die Zahl, die dazu passt.',
+  'say.verliebteZahlen': 'Die verliebten Zahlen! Welche Zahl passt dazu?',
+
+  'say.zahlenreiheErst':
+    'Willkommen im Haus der Nachbarzahlen! Hier steht eine Reihe von Zahlen, und eine fehlt. Findest du sie?',
+  'say.zahlenreihe': 'Die Nachbarzahlen! Welche Zahl fehlt?',
+
+  'say.rechenmeisterErst':
+    'Willkommen im Haus der Rechenmeister! Rechne in Ruhe, und tippe dann auf das Ergebnis.',
+  'say.rechenmeister': 'Die Rechenmeister! Was kommt heraus?',
+
+  'say.zwillingeErst':
+    'Willkommen im Haus der Zwillinge! Hier gibt es alles doppelt. Verdopple die Zahl und tippe auf das Ergebnis.',
+  'say.zwillinge': 'Die Zwillinge! Wie viel ist das Doppelte?',
+
+  'say.anlauteErst':
+    'Willkommen im Haus der ersten Laute! Du siehst ein Bild und hörst das Wort. Mit welchem Buchstaben fängt es an?',
+  'say.anlaute': 'Die ersten Laute! Womit fängt das Wort an?',
+
+  'say.silbenErst':
+    'Willkommen im Haus der Silben! Klatsche das Wort mit, so wie in der Schule. Wie viele Silben hat es?',
+  'say.silben': 'Die Silben! Wie oft klatschst du?',
+
+  'say.wellDone1': 'Das hast du toll gemacht.',
+  'say.wellDone2': 'Super! Ich freue mich.',
+  'say.wellDone3': 'Das war richtig gut.',
+  'say.tryAgain1': 'Schau mal, so geht es.',
+  'say.tryAgain2': 'Fast! Schau, so ist es richtig.',
+  'say.tryAgain3': 'Kein Problem. Hier ist die passende Zahl.',
+  'say.newHouse': 'Schau mal! Ein neues Haus ist auf deine Insel gekommen.',
   'say.build': 'Jetzt kannst du deine Insel schöner machen.',
 
   // ------------------------------------------------------- currencies

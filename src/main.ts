@@ -61,6 +61,35 @@ function sayLine(key: string): void {
   audio.say(voiceOf(key), t(key));
 }
 
+/**
+ * Say one of several, at random.
+ *
+ * A child will hear the praise at the end of a round dozens of times.
+ * The same sentence every single time stops being praise and becomes a
+ * noise the app makes, so there are three and it picks one.
+ */
+function sayOneOf(keys: string[]): void {
+  sayLine(keys[Math.floor(Math.random() * keys.length)]);
+}
+
+/**
+ * The greeting for a house: the full explanation the first time it is
+ * ever opened, the short version afterwards.
+ *
+ * Explaining the rules again on every visit talks down to the child who
+ * has just learned them — and a warm sentence is warm the first time
+ * and wearing by the twentieth.
+ */
+function greetHouse(house: HouseDef): void {
+  const heard = `heard:${house.id}`;
+  if (!state.hasSeen(heard)) {
+    state.markSeen(heard);
+    sayLine(`${house.sayKey}Erst`);
+    return;
+  }
+  sayLine(house.sayKey);
+}
+
 // -------------------------------------------------------------- canvas
 
 function resize(): void {
@@ -457,7 +486,7 @@ let round: RoundState | null = null;
 function startRound(house: HouseDef): void {
   screen = 'round';
   round = { house, qs: buildRound(house.game, QUESTIONS_PER_ROUND), i: 0, right: 0, busy: false };
-  sayLine(house.sayKey);
+  greetHouse(house);
   // The words a language round will need, fetched while the greeting
   // plays, so the first one does not arrive late.
   if (house.game === 'anlaute' || house.game === 'silben') {
@@ -652,7 +681,7 @@ function onAnswer(idx: number, btn: HTMLButtonElement, stageQ: HTMLElement, answ
       if (f) f.replaceChildren(
         tenFrameCanvas({ n: q.prompt.n, extra: 10 - q.prompt.n, shape: counterShape() }, frameScale()));
     }
-    sayLine('say.tryAgain');
+    sayOneOf(['say.tryAgain1', 'say.tryAgain2', 'say.tryAgain3']);
     setTimeout(() => {
       if (!round) return;
       round.i++;
@@ -679,7 +708,7 @@ function finishRound(): void {
     .filter((h) => h.stars > before && h.stars <= after && !state.hasSeen(h.id));
 
   audio.chimeRound();
-  sayLine('say.wellDone');
+  sayOneOf(['say.wellDone1', 'say.wellDone2', 'say.wellDone3']);
 
   clear();
   const sheet = el('div', 'sheet');
@@ -705,6 +734,7 @@ function finishRound(): void {
       audio.thunk();
       drawIslandUi();
       toast(t('island.newHouse'));
+      sayLine('say.newHouse');
     } else {
       drawIslandUi();
     }

@@ -88,7 +88,7 @@ page.on('request', (r) => {
 
 const dist = 'dist/assets/voice';
 const i18n = await readFile('src/core/i18n.ts', 'utf8');
-const sayKeys = [...i18n.matchAll(/'(say\.[A-Za-z]+)':/g)]
+const sayKeys = [...i18n.matchAll(/'(say\.[A-Za-z0-9]+)':/g)]
   .map((m) => m[1].replace(/\./g, '-').toLowerCase());
 const wordList = await readFile('src/games/woerter.ts', 'utf8');
 const wordStems = [...wordList.matchAll(/\{\s*wort:\s*'([^']+)'/g)]

@@ -76,9 +76,18 @@ const MODEL = 'eleven_multilingual_v2';
  * performance at all reads as a grown-up being funny at a child.
  */
 const SETTINGS = {
-  stability: 0.62,
-  similarity_boost: 0.78,
-  style: 0.0,
+  // Warmer than the first pass, which came out correct and a little
+  // flat. Stability at 0.62 kept every reading identical and also kept
+  // every reading level; dropping it lets the sentence rise and fall
+  // the way somebody actually talks to a child. A touch of style adds
+  // the smile.
+  //
+  // Not lower than this, and style not higher: past about 0.3 the model
+  // starts performing, and a grown-up being funny AT a six-year-old is
+  // worse than a grown-up reading plainly to one.
+  stability: 0.45,
+  similarity_boost: 0.80,
+  style: 0.18,
   use_speaker_boost: true,
 };
 
@@ -89,7 +98,7 @@ function spokenLines() {
   const out = {};
   // The table is a plain object literal of 'key': 'value' pairs. A
   // regex is enough and means this script does not need a bundler.
-  const re = /'(say\.[A-Za-z]+)':\s*\n?\s*'((?:[^'\\]|\\.)*)'/g;
+  const re = /'(say\.[A-Za-z0-9]+)':\s*\n?\s*'((?:[^'\\]|\\.)*)'/g;
   let m;
   while ((m = re.exec(src))) {
     const stem = m[1].replace(/\./g, '-').toLowerCase();
