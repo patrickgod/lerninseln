@@ -69,13 +69,17 @@ export function tenFrame(o: FrameOpts): Px {
       for (let dx = -DISC[j]; dx <= DISC[j]; dx++) {
         // Light upper-left, shade lower-right — the same rule as every
         // sprite on the island, so the beads belong to the same world.
-        const lit = dx + dy < -3 ? 3 : dx + dy > 3 ? 1 : 2;
+        //
+        // The band is narrow on purpose. A wide diagonal split across a
+        // nine-pixel disc does not read as a lit sphere, it reads as a
+        // coin lying at an angle, and ten of those in a row made the
+        // frame look like it was sliding off the screen.
+        const lit = dx + dy <= -5 ? 3 : dx + dy >= 5 ? 1 : 2;
         p.set(cx + dx, cy + dy, shade(ramp, lit));
       }
     }
+    // One specular pixel, where the light actually is.
     p.set(cx - 2, cy - 2, shade(ramp, 4));
-    p.set(cx - 1, cy - 2, shade(ramp, 4));
-    p.set(cx - 2, cy - 1, shade(ramp, 4));
   };
 
   const n = Math.max(0, Math.min(10, o.n));

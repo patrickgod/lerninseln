@@ -378,7 +378,7 @@ button:disabled { opacity: 0.45; }
   grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
   gap: 14px;
   width: min(94vw, 900px);
-  max-height: 62vh;
+  max-height: 66vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 6px;
@@ -390,12 +390,12 @@ button:disabled { opacity: 0.45; }
      fixed row the cards size themselves to their sprite and the labels
      land at six different heights down the row, which reads as broken
      rather than as varied. */
-  grid-template-rows: 76px auto auto;
+  grid-template-rows: 68px auto auto;
   justify-items: center;
   align-items: end;
   gap: 4px;
   padding: 10px 6px;
-  height: 168px;
+  height: 152px;
   border-radius: 20px;
 }
 
