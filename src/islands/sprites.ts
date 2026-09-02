@@ -1000,6 +1000,17 @@ export function bird(frame: number): Sprite {
   return { px: p, ax: 5, ay: 3 };
 }
 
+/** A firefly: one warm pixel with a halo, and nothing else. */
+export function firefly(): Sprite {
+  const p = new Px(5, 5);
+  p.set(2, 1, shade(P.glow, 2));
+  p.set(1, 2, shade(P.glow, 2));
+  p.set(3, 2, shade(P.glow, 2));
+  p.set(2, 3, shade(P.glow, 2));
+  p.set(2, 2, shade(P.glow, 4));
+  return { px: p, ax: 2, ay: 2 };
+}
+
 /** A butterfly over a flower bed. Two wing positions, and a colour. */
 export function butterfly(frame: number, hue: number): Sprite {
   const p = new Px(9, 7);

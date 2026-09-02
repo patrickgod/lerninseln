@@ -258,6 +258,79 @@ function purse(): HTMLDivElement {
   return wrap;
 }
 
+// ------------------------------------------------------------ settings
+//
+// AGENTS.md rule 14: sound is optional and off-switchable in TWO TAPS,
+// because this gets played in waiting rooms. Until now there was no way
+// to switch it off at all, which made that rule a comment rather than a
+// feature — so the gear is on the island and on the picker, and it is
+// two taps from either.
+//
+// Deliberately small and in a corner. It is for the grown-up; a child
+// who taps it finds two switches and a way back, and nothing they can
+// break.
+
+function gearButton(): HTMLButtonElement {
+  const b = el('button', 'gear', '⚙');
+  tap(b, () => { audio.click(); showSettings(); });
+  return b;
+}
+
+function showSettings(): void {
+  const sheet = el('div', 'sheet');
+  sheet.appendChild(el('h2', undefined, t('app.name')));
+
+  const rows = el('div', 'settings');
+
+  const toggle = (label: string, on: boolean, set: (v: boolean) => void): HTMLElement => {
+    const row = el('div', 'setting');
+    row.appendChild(el('div', 'label', label));
+    const b = el('button', on ? 'on' : 'off', on ? t('set.on') : t('set.off'));
+    tap(b, () => {
+      const now = !(b.className === 'on');
+      set(now);
+      b.className = now ? 'on' : 'off';
+      b.textContent = now ? t('set.on') : t('set.off');
+      // Give the change a voice, so a parent can hear that it worked —
+      // but only in the direction where a sound is allowed.
+      if (now) audio.click();
+    });
+    row.appendChild(b);
+    return row;
+  };
+
+  rows.appendChild(toggle(t('set.sound'), state.get().sound, (v) => state.setSound(v)));
+  rows.appendChild(toggle(t('set.voice'), state.get().voice, (v) => {
+    state.setVoice(v);
+    if (!v) audio.stopSaying();
+  }));
+  sheet.appendChild(rows);
+
+  const row = el('div');
+  row.appendChild(button(t('shop.close'), () => sheet.remove()));
+
+  // Reset is behind a confirmation, and the confirmation is worded so
+  // that nobody taps it by accident on the way past.
+  row.appendChild(button(t('set.reset'), () => {
+    const confirm = el('div', 'sheet');
+    confirm.appendChild(el('h2', undefined, t('set.resetSure')));
+    const r2 = el('div');
+    r2.appendChild(button(t('set.resetNo'), () => confirm.remove()));
+    const yes = button(t('set.resetYes'), () => {
+      state.reset();
+      confirm.remove();
+      sheet.remove();
+      showPicker();
+    });
+    yes.classList.add('danger');
+    r2.appendChild(yes);
+    confirm.appendChild(r2);
+    ui.appendChild(confirm);
+  }));
+  sheet.appendChild(row);
+  ui.appendChild(sheet);
+}
+
 // --------------------------------------------------------- the picker
 
 function showPicker(): void {
@@ -280,6 +353,10 @@ function showPicker(): void {
   }
   wrap.appendChild(cards);
   ui.appendChild(wrap);
+
+  const corner = el('div', 'corner');
+  corner.appendChild(gearButton());
+  ui.appendChild(corner);
 
   // The one line a child who cannot read needs.
   sayLine('say.pickIsland');
@@ -317,6 +394,7 @@ function drawIslandUi(): void {
   clear();
   const hud = el('div', 'hud');
   hud.appendChild(button(t('island.back'), () => showPicker()));
+  hud.appendChild(gearButton());
   hud.appendChild(el('div', 'spacer'));
   hud.appendChild(purse());
   ui.appendChild(hud);
@@ -873,6 +951,16 @@ function flyReward(
 }
 
 // ------------------------------------------------------------- startup
+
+// `?zeit=nacht` pins the time of day. For the screenshot harness, and
+// for anybody who wants to see the island at midnight at four in the
+// afternoon.
+{
+  const z = new URLSearchParams(location.search).get('zeit');
+  if (z === 'morgen' || z === 'tag' || z === 'abend' || z === 'nacht') {
+    render.forceTime(z);
+  }
+}
 
 state.init();
 resize();

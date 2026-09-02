@@ -216,6 +216,44 @@ export function butterflies(time: number, placed: Placed[]): Flyer[] {
 }
 
 /**
+ * Fireflies, after dark.
+ *
+ * Added instead of making the night darker, and that is the whole
+ * design argument. Night here is a step down the same ramps — an
+ * honest palette move rather than a blue filter — so it can only ever
+ * be so dark before every colour clamps to the bottom of its ramp and
+ * the picture loses its contrast. Two more steps of gloom would have
+ * made the island less legible for a six-year-old at bedtime and no
+ * more atmospheric.
+ *
+ * What actually says "night" is small warm lights doing something a
+ * daytime island cannot: lit windows, a lantern, and these. They
+ * wander slowly, they blink, and there are never many.
+ */
+export function fireflies(islandId: string, time: number, trees: number): Flyer[] {
+  if (trees < 3) return [];
+  const home = woodCentre(islandId) ?? { x: (GRID - 1) / 2, y: (GRID - 1) / 2 };
+  const out: Flyer[] = [];
+  for (let i = 0; i < 7; i++) {
+    // Blink: on for most of a long cycle, off for a beat. Offset per
+    // fly, so they are never in step — a synchronised swarm reads as a
+    // string of fairy lights.
+    const blink = (time * 0.55 + hash(i * 733)) % 1;
+    if (blink > 0.72) continue;
+    const a = time * (0.10 + hash(i * 91) * 0.09) + i * 2.1;
+    const r = 1.1 + hash(i * 17) * 2.4;
+    out.push({
+      x: home.x + Math.cos(a) * r + Math.sin(time * 0.7 + i) * 0.25,
+      y: home.y + Math.sin(a * 0.8) * r * 0.8,
+      h: 14 + Math.sin(time * 0.9 + i * 1.3) * 9,
+      frame: 0,
+      seed: i,
+    });
+  }
+  return out;
+}
+
+/**
  * A boat, if there is a lighthouse to guide it.
  *
  * The single most satisfying thing the shop sells, and the reason it is

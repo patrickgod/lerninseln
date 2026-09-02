@@ -62,6 +62,35 @@ export class Px {
     this.data[i + 3] = out * 255;
   }
 
+  /**
+   * Rewrite every colour in the buffer through a function.
+   *
+   * This is how the time of day works: each pixel steps along the ramp
+   * it already belongs to, so a night scene is still strictly inside
+   * the palette. ART-DIRECTION.md's rule, applied to the clock instead
+   * of to the seasons — night is not a blue filter over daytime, it is
+   * the same sprites reading a different row of the same table, which
+   * is why it looks authored rather than filtered.
+   */
+  remap(fn: (hex: string) => string): void {
+    const hex = (n: number): string => n.toString(16).padStart(2, '0');
+    const seen = new Map<string, [number, number, number]>();
+    for (let i = 0; i < this.data.length; i += 4) {
+      if (this.data[i + 3] < 8) continue;
+      const key = `#${hex(this.data[i])}${hex(this.data[i + 1])}${hex(this.data[i + 2])}`;
+      let out = seen.get(key);
+      if (!out) {
+        const c = fn(key);
+        const n = parseInt(c.slice(1), 16);
+        out = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+        seen.set(key, out);
+      }
+      this.data[i] = out[0];
+      this.data[i + 1] = out[1];
+      this.data[i + 2] = out[2];
+    }
+  }
+
   get(x: number, y: number): boolean {
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return false;
     return this.data[((y | 0) * this.w + (x | 0)) * 4 + 3] > 8;

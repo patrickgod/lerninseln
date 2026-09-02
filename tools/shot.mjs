@@ -172,6 +172,21 @@ if (want('leben')) {
   });
   await page.waitForTimeout(300);
   await shot('leben-nackt');
+
+  // The same island at dusk and at night. Nothing is tinted: every
+  // sprite steps down its own ramp, and the lights step UP.
+  for (const zeit of ['abend', 'nacht']) {
+    await page.goto(`http://localhost:${PORT}/?zeit=${zeit}`);
+    await page.waitForTimeout(700);
+    await page.locator('.island-card').first().tap();
+    await page.waitForTimeout(1400);
+    await page.evaluate(() => {
+      const l = document.querySelector('.labels');
+      if (l) l.style.display = 'none';
+    });
+    await page.waitForTimeout(200);
+    await shot(`insel-${zeit}`);
+  }
 }
 
 await browser.close();

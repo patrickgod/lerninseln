@@ -197,6 +197,24 @@ export const FACE_STEP: Record<Face, number> = {
   front: -0.5,
 };
 
+/**
+ * Darken a colour for the time of day, leaving the lights alone.
+ *
+ * `glow` is the ramp that lit windows, lanterns and the lighthouse are
+ * drawn from, and it must not follow everything else down — the whole
+ * point of dusk is that the lights come UP against a darker world. The
+ * first version stepped everything uniformly and produced an island at
+ * midnight with dark windows, which reads as abandoned rather than as
+ * asleep.
+ */
+const GLOW = new Set(P.glow.map((c) => c.toLowerCase()));
+
+export function atNight(hex: string, steps: number): string {
+  const h = hex.toLowerCase();
+  if (GLOW.has(h)) return stepBy(hex, 1);
+  return stepBy(hex, steps);
+}
+
 /** Is this colour in the palette? Used by the verification harness. */
 export function inPalette(hex: string): boolean {
   return hex.toLowerCase() === INK || WHERE.has(hex.toLowerCase());

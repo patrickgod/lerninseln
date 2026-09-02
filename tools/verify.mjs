@@ -266,6 +266,40 @@ check('even a round of misses pays something',
 check('there is no screen that says you did badly',
   !/falsch|leider|schade|verloren/i.test(await page.locator('.sheet').innerText()));
 
+// ----------------------------------------------------------- settings
+//
+// AGENTS.md rule 14: sound is optional and off-switchable in TWO TAPS,
+// because this gets played in waiting rooms. Two taps means the gear
+// and then the switch, from wherever the child happens to be — so this
+// counts them.
+
+await page.goto(BASE);
+await page.waitForTimeout(700);
+await page.locator('.island-card').first().tap();
+await page.waitForTimeout(800);
+await page.locator('.gear').first().tap();      // tap one
+await page.waitForTimeout(350);
+check('the settings open from the island', await page.locator('.settings').count() === 1);
+await measureButtons('settings');
+await page.locator('.setting button').first().tap();   // tap two
+await page.waitForTimeout(300);
+const soundOff = await page.evaluate(() => {
+  const raw = localStorage.getItem('lerninseln.save.v1');
+  return raw ? JSON.parse(raw).sound : null;
+});
+check('sound switches off in two taps', soundOff === false, `sound=${soundOff}`);
+await page.reload();
+await page.waitForTimeout(700);
+const stillOff = await page.evaluate(() => {
+  const raw = localStorage.getItem('lerninseln.save.v1');
+  return raw ? JSON.parse(raw).sound : null;
+});
+check('and stays off across a reload', stillOff === false, `sound=${stillOff}`);
+await page.evaluate(() => {
+  const raw = JSON.parse(localStorage.getItem('lerninseln.save.v1') ?? '{}');
+  localStorage.setItem('lerninseln.save.v1', JSON.stringify({ ...raw, sound: true }));
+});
+
 // ------------------------------------------------------------ offline
 //
 // The real test of the service worker. One visit, then the network is

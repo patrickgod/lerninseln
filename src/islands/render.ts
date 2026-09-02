@@ -18,7 +18,7 @@
 //   machine — and the harness never showed it, because a software
 //   rasteriser does not pay for mixed surfaces.
 
-import { P, shade } from '../core/palette.js';
+import { P, shade, atNight } from '../core/palette.js';
 import { GRID, isLand, isSand, island, unlockedHouses, housesOn, type HouseDef } from './islands.js';
 import * as S from './sprites.js';
 import * as state from '../core/state.js';
@@ -39,6 +39,45 @@ interface Baked {
 
 const cache = new Map<string, Baked>();
 
+// ------------------------------------------------------- time of day
+//
+// Tidegarden's seasons are a ramp lookup resolved once, not a tint over
+// summer, and that is exactly why autumn there looks authored rather
+// than filtered. The same trick, applied to the clock: night is the
+// same sprites reading a different row of the same table.
+//
+// Four phases, on the real clock, because a child who plays after
+// dinner should see a different island from the one they saw after
+// school — and because it costs a lookup.
+
+export type Tageszeit = 'morgen' | 'tag' | 'abend' | 'nacht';
+
+/** How many ramp steps down each phase sits. */
+const DIM: Record<Tageszeit, number> = {
+  morgen: 0,
+  tag: 0,
+  abend: -1,
+  nacht: -2,
+};
+
+let forced: Tageszeit | null = null;
+
+/** Pin the time of day. Used by the screenshot harness, and by tests. */
+export function forceTime(t: Tageszeit | null): void {
+  if (forced === t) return;
+  forced = t;
+  cache.clear();
+}
+
+export function tageszeit(now = new Date()): Tageszeit {
+  if (forced) return forced;
+  const h = now.getHours();
+  if (h >= 6 && h < 9) return 'morgen';
+  if (h >= 9 && h < 18) return 'tag';
+  if (h >= 18 && h < 21) return 'abend';
+  return 'nacht';
+}
+
 /**
  * The colour of the board over each house's door.
  *
@@ -56,11 +95,17 @@ const ACCENTS: Record<string, readonly string[]> = {
 };
 
 function bake(key: string, make: () => S.Sprite): Baked {
-  const hit = cache.get(key);
+  const dim = DIM[tageszeit()];
+  const k = dim ? `${key}@${dim}` : key;
+  const hit = cache.get(k);
   if (hit) return hit;
   const s = make();
+  // The whole sprite steps down its own ramps — lit windows and
+  // lanterns excepted, which is what makes dusk read as the lights
+  // coming up rather than as the island being switched off.
+  if (dim) s.px.remap((hex) => atNight(hex, dim));
   const out = { c: s.px.toCanvas(), ax: s.ax, ay: s.ay };
-  cache.set(key, out);
+  cache.set(k, out);
   return out;
 }
 
@@ -292,7 +337,7 @@ export function draw(
 
   // Sea, flat, under everything. The animated part is only the swell
   // near the coast, because that is the only place anybody looks.
-  ctx.fillStyle = shade(P.sea, 1);
+  ctx.fillStyle = atNight(shade(P.sea, 1), DIM[tageszeit()]);
   ctx.fillRect(0, 0, w, h);
 
   const phase = Math.floor((o.time * 2.2) % WAVE_PHASES);
@@ -476,6 +521,20 @@ export function draw(
     const fs = tileToScreen(v, f.x, f.y);
     const b = bake(`bird:${f.frame}`, () => S.bird(f.frame));
     ctx.drawImage(b.c, Math.round(fs.sx - b.ax), Math.round(fs.sy - LIFT - f.h - b.ay));
+  }
+  // Fireflies, after dark. Baked WITHOUT the night dimming — they are
+  // the light, so they must not step down with everything else.
+  if (tageszeit() === 'nacht') {
+    const ff = cache.get('firefly') ?? (() => {
+      const sp = S.firefly();
+      const made = { c: sp.px.toCanvas(), ax: sp.ax, ay: sp.ay };
+      cache.set('firefly', made);
+      return made;
+    })();
+    for (const f of life.fireflies(o.islandId, o.time, trees.length)) {
+      const fs = tileToScreen(v, f.x, f.y);
+      ctx.drawImage(ff.c, Math.round(fs.sx - ff.ax), Math.round(fs.sy - LIFT - f.h - ff.ay));
+    }
   }
 
   ctx.restore();
