@@ -27,7 +27,10 @@
 // table cannot be spoken — which is the same rule the app enforces from
 // the other side.
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync, unlinkSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+
+const FFMPEG = 'ffmpeg';
 
 const args = process.argv.slice(2);
 const FORCE = args.includes('--force');
@@ -139,6 +142,57 @@ async function tts(text, voice, path) {
   writeFileSync(path, Buffer.from(await res.arrayBuffer()));
 }
 
+/**
+ * Shrink and tidy a take.
+ *
+ * The generator hands back 128kbps stereo at 44.1kHz, which for one
+ * spoken German word is about 16KB of which roughly a third is silence.
+ * Seventy-seven of those came to 1.8MB — and this app caches ALL of
+ * itself on install so that it works on a train, which makes every one
+ * of those kilobytes part of the first launch on a school iPad.
+ *
+ * So: mono (it is one voice, and an iPad speaker is mono anyway),
+ * 64kbps (speech, not music), and the silence trimmed off both ends so
+ * that a word answers a tap immediately instead of a beat later. That
+ * last one is the part a child would actually notice.
+ *
+ * `loudnorm` is deliberately NOT used: it is a two-pass measurement and
+ * on takes this short it pumps. A fixed, gentle gain keeps every line
+ * at the same level, which is what "einheitlich" was asking for.
+ */
+function shrink(path) {
+  const tmp = `${path}.tmp.mp3`;
+  try {
+    execFileSync(FFMPEG, [
+      '-y', '-hide_banner', '-loglevel', 'error',
+      '-i', path,
+      '-af', [
+        // leading silence
+        'silenceremove=start_periods=1:start_duration=0.02:start_threshold=-45dB',
+        // trailing silence, by reversing, trimming and reversing back —
+        // ffmpeg has no "stop_silence" that behaves on short files
+        'areverse',
+        'silenceremove=start_periods=1:start_duration=0.02:start_threshold=-45dB',
+        'areverse',
+        // a breath of room at the end, so the tail is not clipped
+        'apad=pad_dur=0.12',
+        'volume=1.15',
+      ].join(','),
+      '-ac', '1', '-ar', '44100', '-b:a', '64k',
+      tmp,
+    ], { stdio: 'pipe' });
+    renameSync(tmp, path);
+  } catch (e) {
+    // No ffmpeg, or a take it cannot handle. The unprocessed file is
+    // still perfectly playable, so this must never be fatal.
+    if (existsSync(tmp)) unlinkSync(tmp);
+    if (!shrink.warned) {
+      console.log(`  (not shrinking: ${String(e.message).split('\n')[0]})`);
+      shrink.warned = true;
+    }
+  }
+}
+
 // ------------------------------------------------------------------ go
 
 if (SAMPLES) {
@@ -164,7 +218,16 @@ if (SAMPLES) {
 mkdirSync('assets/voice', { recursive: true });
 const all = { ...spokenLines(), ...words(), ...numbers() };
 const names = Object.keys(all);
-console.log(`${names.length} lines, voice ${VOICE}`);
+
+// ElevenLabs bills characters, and this whole set is regenerated every
+// time the voice changes, so it is worth knowing what a rerun costs
+// before spending it. `--dry` prints the bill and stops.
+const chars = Object.values(all).reduce((a, s) => a + s.length, 0);
+console.log(`${names.length} lines, ${chars} characters, voice ${VOICE}`);
+if (args.includes('--dry')) {
+  for (const stem of names) console.log(`  ${stem}  "${all[stem]}"`);
+  process.exit(0);
+}
 
 let made = 0, skipped = 0;
 for (const stem of names) {
@@ -173,6 +236,7 @@ for (const stem of names) {
   process.stdout.write(`  ${stem} … `);
   try {
     await tts(all[stem], VOICE, path);
+    shrink(path);
     made++;
     console.log('ok');
   } catch (e) {

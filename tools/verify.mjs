@@ -64,13 +64,50 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => {
   if (m.type() !== 'error') return;
-  // A 404 for a voice file is expected until `npm run voice` has been
-  // run with a key that can speak; it is not a failure of the app.
-  const t = m.text();
-  if (/assets\/voice\//.test(t)) return;
-  if (/Failed to load resource/.test(t)) return;
-  errors.push(t);
+  errors.push(m.text());
 });
+
+// Every request the page makes, so a 404 cannot hide. The app is
+// supposed to ask for nothing but its own files, and it is supposed to
+// get all of them.
+const notFound = [];
+page.on('response', (r) => { if (r.status() === 404) notFound.push(new URL(r.url()).pathname); });
+const offsite = new Set();
+page.on('request', (r) => {
+  const u = new URL(r.url());
+  if (u.origin !== new URL(BASE).origin) offsite.add(u.origin);
+});
+
+// ------------------------------------------------------- the voice set
+//
+// Checked on disk rather than by listening, because what can go wrong
+// here is a MISSING file, and a child who taps a house and hears
+// nothing has been shown an instruction they cannot read. The earlier
+// version of this suite simply ignored 404s under assets/voice, which
+// meant it would have stayed green if the whole voice set vanished.
+
+const dist = 'dist/assets/voice';
+const i18n = await readFile('src/core/i18n.ts', 'utf8');
+const sayKeys = [...i18n.matchAll(/'(say\.[A-Za-z]+)':/g)]
+  .map((m) => m[1].replace(/\./g, '-').toLowerCase());
+const wordList = await readFile('src/games/woerter.ts', 'utf8');
+const wordStems = [...wordList.matchAll(/\{\s*wort:\s*'([^']+)'/g)]
+  .map((m) => 'wort-' + m[1].toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss'));
+
+const missingVoice = [];
+for (const stem of [...sayKeys, ...wordStems]) {
+  try {
+    const buf = await readFile(join(dist, `${stem}.mp3`));
+    // An empty or near-empty MP3 is a failed take that was written
+    // anyway. 1KB is well under the smallest real word.
+    if (buf.length < 1024) missingVoice.push(`${stem} (${buf.length}b)`);
+  } catch {
+    missingVoice.push(stem);
+  }
+}
+check(`every spoken line ships as audio (${sayKeys.length + wordStems.length} checked)`,
+  missingVoice.length === 0, missingVoice.slice(0, 5).join(', '));
 
 // -------------------------------------------------------- the picker
 
@@ -225,6 +262,12 @@ await ctx.setOffline(false);
 // ------------------------------------------------------------ no noise
 
 check('nothing threw', errors.length === 0, errors.slice(0, 3).join(' | '));
+check('nothing 404s', notFound.length === 0, [...new Set(notFound)].slice(0, 5).join(', '));
+
+// AGENTS.md rule 8: nothing leaves the device. This is the check that
+// makes that a fact rather than an intention — if anybody ever adds a
+// font from a CDN or an analytics beacon, this goes red.
+check('the app talks to nobody', offsite.size === 0, [...offsite].join(', '));
 
 await browser.close();
 server.close();

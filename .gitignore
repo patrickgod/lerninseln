@@ -3,3 +3,4 @@ dist/
 scratch*
 .voice-cache/
 shots/
+audio_raw/
