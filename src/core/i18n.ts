@@ -22,6 +22,7 @@ const DE = {
 
   // ------------------------------------------------------ island pick
   'islands.title': 'Wähle eine Insel',
+  'islands.titleNamed': 'Die Inseln von {name}',
   'island.mathe': 'Die Insel der Zahlen',
   'island.mathe.sub': 'Rechnen, zählen, Zahlen finden',
   'island.sprache': 'Die Insel der Sprache',
@@ -177,6 +178,11 @@ const DE = {
   'set.voice': 'Stimme',
   'set.on': 'an',
   'set.off': 'aus',
+  'set.name': 'Name',
+  'set.namePlaceholder': 'Wie heißt du?',
+  'set.postcard': 'Postkarte',
+  'set.save': 'Speichern',
+  'set.postcardHint': 'Bild gedrückt halten und sichern',
   'set.reset': 'Alles zurücksetzen',
   'set.resetSure': 'Wirklich alles löschen?',
   'set.resetYes': 'Ja, löschen',

@@ -329,6 +329,22 @@ function showSettings(): void {
     return row;
   };
 
+  // The name. A text field is the one place in this app where a
+  // keyboard appears, which is why it lives behind the gear: it is for
+  // the grown-up to fill in once.
+  const nameRow = el('div', 'setting');
+  nameRow.appendChild(el('div', 'label', t('set.name')));
+  const nameField = el('input');
+  nameField.type = 'text';
+  nameField.value = state.get().name;
+  nameField.placeholder = t('set.namePlaceholder');
+  nameField.maxLength = 16;
+  nameField.autocapitalize = 'words';
+  nameField.addEventListener('change', () => state.setName(nameField.value));
+  nameField.addEventListener('blur', () => state.setName(nameField.value));
+  nameRow.appendChild(nameField);
+  rows.appendChild(nameRow);
+
   rows.appendChild(toggle(t('set.sound'), state.get().sound, (v) => state.setSound(v)));
   rows.appendChild(toggle(t('set.voice'), state.get().voice, (v) => {
     state.setVoice(v);
@@ -338,6 +354,7 @@ function showSettings(): void {
 
   const row = el('div');
   row.appendChild(button(t('shop.close'), () => sheet.remove()));
+  row.appendChild(button(t('set.postcard'), () => { sheet.remove(); showPostcard(); }));
 
   // Reset is behind a confirmation, and the confirmation is worded so
   // that nobody taps it by accident on the way past.
@@ -361,13 +378,101 @@ function showSettings(): void {
   ui.appendChild(sheet);
 }
 
+/**
+ * A postcard of the island, to show somebody.
+ *
+ * This one is for the grown-up, and it is the thing that gets a class
+ * interested: a child who can show their island to a parent, and a
+ * parent who can show it to another parent, is worth more than any
+ * amount of in-app persuasion.
+ *
+ * Presented as an IMAGE in a sheet rather than as a download, because
+ * on iOS `<a download>` is unreliable and a data URL cannot be opened
+ * in a new tab at all — but long-pressing an `<img>` and choosing
+ * "Save to Photos" has worked on every iPad ever made. The download
+ * link is there too, for the desktop.
+ *
+ * Nothing leaves the device: the picture is drawn from the canvas that
+ * is already on screen and handed straight to the operating system.
+ */
+function showPostcard(): void {
+  // Size the card to the ISLAND rather than picking a nice round number
+  // and hoping. The first version was a fixed 1200x820 and the island
+  // sat in the middle of it with a third of the picture empty sea on
+  // every side, which is a screenshot rather than a postcard.
+  const SCALE = 4;
+  const box = render.landBox(currentIsland);
+
+  // Headroom above for the tall things — a lighthouse and a windmill
+  // both stand well clear of their own tile — and much less below,
+  // because nothing hangs down. Padding the two ends equally is what
+  // left a third of the first card empty.
+  const padTop = 62, padBottom = 24, padSide = 26;
+  const band = 74;
+  const w = Math.round((box.maxX - box.minX + padSide * 2) * SCALE);
+  const h = Math.round((box.maxY - box.minY + padTop + padBottom) * SCALE) + band;
+
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const cx = c.getContext('2d', { willReadFrequently: true })!;
+  cx.imageSmoothingEnabled = false;
+
+  // The labels are left off on purpose: a postcard is a picture, not a
+  // screen.
+  const v: render.View = {
+    scale: SCALE,
+    ox: (w / SCALE) / 2 - (box.minX + box.maxX) / 2,
+    oy: ((h - band) / SCALE) / 2 - (box.minY + box.maxY) / 2 + (padTop - padBottom) / 2,
+  };
+  cx.save();
+  render.draw(cx, v, w, h - band, {
+    islandId: currentIsland,
+    time: (performance.now() - started) / 1000,
+    building: false,
+    hover: null,
+    arriving: null,
+  });
+  cx.restore();
+
+  // A caption band along the bottom.
+  cx.fillStyle = '#241d2b';
+  cx.fillRect(0, h - band, w, band);
+  cx.fillStyle = '#f8f0dc';
+  cx.font = 'bold 40px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif';
+  cx.textAlign = 'center';
+  cx.textBaseline = 'middle';
+  const who = state.get().name;
+  cx.fillText(who ? t('islands.titleNamed', { name: who }) : t('app.name'), w / 2, h - band / 2);
+
+  const sheet = el('div', 'sheet');
+  sheet.appendChild(el('h2', undefined, t('set.postcard')));
+  const img = el('img', 'postcard');
+  img.src = c.toDataURL('image/png');
+  img.alt = t('app.name');
+  sheet.appendChild(img);
+  sheet.appendChild(el('div', 'hinweis', t('set.postcardHint')));
+
+  const row = el('div');
+  const dl = el('a', 'dl');
+  dl.href = img.src;
+  dl.download = 'lerninseln.png';
+  dl.textContent = t('set.save');
+  row.appendChild(dl);
+  row.appendChild(button(t('shop.close'), () => sheet.remove()));
+  sheet.appendChild(row);
+  ui.appendChild(sheet);
+}
+
 // --------------------------------------------------------- the picker
 
 function showPicker(): void {
   screen = 'picker';
   clear();
   const wrap = el('div', 'picker');
-  wrap.appendChild(el('h1', undefined, t('islands.title')));
+  const who = state.get().name;
+  wrap.appendChild(el('h1', undefined,
+    who ? t('islands.titleNamed', { name: who }) : t('islands.title')));
 
   const cards = el('div', 'cards');
   for (const def of ISLANDS) {

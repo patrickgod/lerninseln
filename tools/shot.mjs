@@ -249,6 +249,34 @@ if (want('freunde')) {
   await shot('freunde');
 }
 
+// The settings, with a name in them, and the postcard.
+if (want('einstellungen')) {
+  await page.goto(`http://localhost:${PORT}/`);
+  await page.evaluate(() => {
+    const placed = [
+      ['teich', 7, 7], ['zaun', 10, 7], ['beet', 6, 10], ['blumenbeet', 9, 10],
+      ['bank', 11, 9], ['leuchtturm', 5, 7], ['kirschbaum', 9, 5],
+      ['birnbaum', 11, 11], ['feuerstelle', 7, 12], ['windmuehle', 12, 8],
+      ['bienenstock', 6, 6], ['sonnenblumen', 10, 13],
+    ].map(([d, x, y]) => ({ d, i: 'mathe', x, y }));
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+      v: 1, stars: 120, candy: 300, seen: [], placed, strength: {},
+      sound: true, voice: false, name: 'Ben',
+    }));
+  });
+  await page.reload();
+  await page.waitForTimeout(900);
+  await shot('picker-named');
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(1400);
+  await page.locator('.gear').first().tap();
+  await page.waitForTimeout(400);
+  await shot('einstellungen');
+  await page.locator('button', { hasText: 'Postkarte' }).first().tap();
+  await page.waitForTimeout(900);
+  await shot('postkarte');
+}
+
 await browser.close();
 server.close();
 console.log('done');

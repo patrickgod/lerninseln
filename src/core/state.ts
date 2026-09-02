@@ -53,6 +53,17 @@ export interface Save {
   strength: Record<string, number>;
   sound: boolean;
   voice: boolean;
+  /**
+   * The child's name, if anybody typed one.
+   *
+   * Ownership is one of the strongest things there is at six, and this
+   * is the cheapest possible version of it: the picker stops saying
+   * "Wähle eine Insel" and starts saying "Die Inseln von Ben".
+   *
+   * Stays on the device with everything else. It is never sent
+   * anywhere, because nothing here is.
+   */
+  name: string;
 }
 
 function fresh(): Save {
@@ -65,6 +76,7 @@ function fresh(): Save {
     strength: {},
     sound: true,
     voice: true,
+    name: '',
   };
 }
 
@@ -101,6 +113,10 @@ export function init(): Save {
       strength: raw.strength && typeof raw.strength === 'object' ? { ...raw.strength } : base.strength,
       sound: raw.sound !== false,
       voice: raw.voice !== false,
+      // Trimmed and capped: this goes into a heading, and a name that
+      // is four hundred characters long would push the islands off the
+      // screen.
+      name: typeof raw.name === 'string' ? raw.name.trim().slice(0, 16) : base.name,
     };
   } catch {
     state = fresh();
@@ -190,6 +206,11 @@ export function setSound(on: boolean): void {
 
 export function setVoice(on: boolean): void {
   state.voice = on;
+  flush();
+}
+
+export function setName(n: string): void {
+  state.name = n.trim().slice(0, 16);
   flush();
 }
 

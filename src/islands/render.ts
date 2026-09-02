@@ -263,6 +263,35 @@ export const LIFT = 7;
  * houses. Measuring the mask costs one pass over 169 booleans and is
  * done once per island.
  */
+/**
+ * The land's bounding box in sprite pixels.
+ *
+ * Returned as the actual edges rather than a width and a height,
+ * because the postcard needs to CENTRE on it and a size alone is not
+ * enough to do that — the first version scaled a `fit` result computed
+ * for a different zoom, which put the island a long way off centre in
+ * a card with a third of it empty sea.
+ */
+export function landBox(islandId: string):
+{ minX: number; maxX: number; minY: number; maxY: number } {
+  let minSx = Infinity, maxSx = -Infinity, minSy = Infinity, maxSy = -Infinity;
+  for (let y = 0; y < GRID; y++) {
+    for (let x = 0; x < GRID; x++) {
+      if (!isLand(islandId, x, y)) continue;
+      const sx = (x - y) * (TW / 2);
+      const sy = (x + y) * (TH / 2);
+      minSx = Math.min(minSx, sx - TW / 2);
+      maxSx = Math.max(maxSx, sx + TW / 2);
+      minSy = Math.min(minSy, sy - TH / 2);
+      maxSy = Math.max(maxSy, sy + TH / 2);
+    }
+  }
+  if (!Number.isFinite(minSx)) {
+    return { minX: 0, maxX: GRID * TW, minY: 0, maxY: GRID * TH };
+  }
+  return { minX: minSx, maxX: maxSx, minY: minSy, maxY: maxSy };
+}
+
 export function fit(cssW: number, cssH: number, islandId = 'mathe'): View {
   let minSx = Infinity, maxSx = -Infinity, minSy = Infinity, maxSy = -Infinity;
   for (let y = 0; y < GRID; y++) {
