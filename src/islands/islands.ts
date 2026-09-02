@@ -72,6 +72,14 @@ export const ISLANDS: IslandDef[] = [
     seed: 8821,
     tree: 'pine',
   },
+  {
+    id: 'entdecker',
+    nameKey: 'island.entdecker',
+    subKey: 'island.entdecker.sub',
+    sayKey: 'say.entdecker',
+    seed: 4711,
+    tree: 'leaf',
+  },
 ];
 
 /**
@@ -166,6 +174,34 @@ export const HOUSES: HouseDef[] = [
     x: 11, y: 6,
     roof: 'slate',
     game: 'reime',
+  },
+
+  // ---------------------------------------- Die Insel der Entdecker
+  //
+  // Both houses here ask their question with NO WORDS ON SCREEN AT
+  // ALL — the shape is named aloud and the answers are drawings. That
+  // makes this the island a child who cannot read a single letter can
+  // play completely unaided, which is why it is the third one and not
+  // the last.
+  {
+    id: 'formen',
+    island: 'entdecker',
+    nameKey: 'house.formen',
+    sayKey: 'say.formen',
+    stars: 0,
+    x: 8, y: 8,
+    roof: 'terracotta',
+    game: 'formen',
+  },
+  {
+    id: 'muster',
+    island: 'entdecker',
+    nameKey: 'house.muster',
+    sayKey: 'say.muster',
+    stars: 30,
+    x: 6, y: 10,
+    roof: 'slate',
+    game: 'muster',
   },
 ];
 

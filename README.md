@@ -15,6 +15,12 @@ island slowly becomes theirs and nobody else's.
 |---|---|
 | **Die Insel der Zahlen** | Verliebte Zahlen · Nachbarzahlen · Rechenmeister · Zwillinge |
 | **Die Insel der Sprache** | Erste Laute · Silben · Erste Wörter · Reime |
+| **Die Insel der Entdecker** | Formen · Muster |
+
+The third island asks its questions with **no word on the screen at
+all** — the shape is named aloud and the answers are drawings — which
+makes it the one a child who cannot read a single letter can play
+completely unaided.
 
 The first house is the one the whole thing was built for. **Verliebte
 Zahlen** — numbers in love. 1 and 9 are a pair. 2 and 8 are a pair.
@@ -123,6 +129,7 @@ node tools/genvoice.mjs --voice <id> --force
 ## What is not built yet
 
 * Zahlenfreunde bis 20, Einmaleins — the later games from DESIGN.md.
-* A third island.
-* Pictures for the rest of the word list; twelve of the forty-four have
+* Pictures for the rest of the word list; twenty of the forty-four have
   one.
+* The spaced repetition has never been watched over a real fortnight,
+  which is the only way to know whether the tilt is right.

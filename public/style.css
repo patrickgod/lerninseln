@@ -723,3 +723,46 @@ a.dl:active { transform: translateY(4px); box-shadow: 0 0 0 var(--ink); }
 }
 
 .hdot.open { background: var(--glow); opacity: 1; }
+
+/* ------------------------------------------------- shapes and patterns */
+
+.answers.shapes button {
+  width: clamp(120px, 17vw, 172px);
+  height: clamp(120px, 17vh, 172px);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.answers.shapes button canvas { image-rendering: pixelated; display: block; }
+
+.muster {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.zelle {
+  width: clamp(58px, 8.5vh, 92px);
+  height: clamp(58px, 8.5vh, 92px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--plaster);
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+}
+
+.zelle canvas { image-rendering: pixelated; display: block; }
+
+/* The gap the child is filling. Pale, and the only thing in the row
+   that is not a shape. */
+.zelle.luecke {
+  background: var(--chalk-pale);
+  color: var(--chalk-light);
+  font-size: clamp(28px, 4.5vh, 46px);
+  border-style: dashed;
+}

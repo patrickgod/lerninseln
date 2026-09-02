@@ -136,7 +136,7 @@ check('the pictures spread across the alphabet', initials.size >= 10,
 await page.goto(BASE);
 await page.waitForTimeout(700);
 
-check('the picker offers two islands', await page.locator('.island-card').count() === 2);
+check('the picker offers three islands', await page.locator('.island-card').count() === 3);
 
 /** Every visible button, measured. Apple's 44pt is for adults. */
 async function measureButtons(where) {
@@ -266,6 +266,44 @@ check('even a round of misses pays something',
 check('there is no screen that says you did badly',
   !/falsch|leider|schade|verloren/i.test(await page.locator('.sheet').innerText()));
 
+// ------------------------------------------------- the wordless island
+//
+// Both houses on the Insel der Entdecker answer with DRAWINGS rather
+// than with text, which is a different card renderer and could break
+// without a single string changing. The assertion is deliberately about
+// survival rather than about score: the test cannot hear which shape
+// was asked for, and neither can it read one off a card, which is the
+// entire point of that island.
+
+await page.goto(BASE);
+await page.evaluate(() => {
+  localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+    v: 1, stars: 200, candy: 0, seen: [], placed: [], strength: {},
+    sound: false, voice: false, name: '',
+  }));
+});
+await page.reload();
+await page.waitForTimeout(800);
+await page.locator('.island-card').nth(2).tap();
+await page.waitForTimeout(1200);
+const shapeLabel = page.locator('.house-label').filter({ hasText: 'Formen' });
+const sb = await shapeLabel.first().boundingBox();
+if (sb) {
+  await page.touchscreen.tap(sb.x + sb.width / 2, sb.y - 30);
+  await page.waitForTimeout(1200);
+}
+const cards = await page.locator('.answers.shapes button').count();
+check('the shapes house deals cards with no words on them', cards === 4, `${cards} cards`);
+const drawn = await page.locator('.answers.shapes button canvas').count();
+check('every shape card is a drawing', drawn === cards, `${drawn} of ${cards}`);
+const written = await page.locator('.answers.shapes button').evaluateAll(
+  (els) => els.filter((e) => (e.textContent || '').trim().length > 0).length);
+check('and nothing is written on any of them', written === 0, `${written} with text`);
+await measureButtons('shapes');
+const askedShapes = await playRound(false);
+check('a shapes round can be played to the end',
+  await page.locator('.sheet').count() > 0, `${askedShapes} answers given`);
+
 // ----------------------------------------------------------- settings
 //
 // AGENTS.md rule 14: sound is optional and off-switchable in TWO TAPS,
@@ -281,20 +319,29 @@ await page.locator('.gear').first().tap();      // tap one
 await page.waitForTimeout(350);
 check('the settings open from the island', await page.locator('.settings').count() === 1);
 await measureButtons('settings');
+// Assert the switch FLIPS rather than that it lands on a particular
+// value. The first version checked for `false`, which quietly depended
+// on every earlier step in this file leaving sound on — and broke the
+// day a new section above it wrote a save with the sound already off.
+const soundBefore = await page.evaluate(() => {
+  const raw = localStorage.getItem('lerninseln.save.v1');
+  return raw ? JSON.parse(raw).sound : null;
+});
 await page.locator('.setting button').first().tap();   // tap two
 await page.waitForTimeout(300);
-const soundOff = await page.evaluate(() => {
+const soundAfter = await page.evaluate(() => {
   const raw = localStorage.getItem('lerninseln.save.v1');
   return raw ? JSON.parse(raw).sound : null;
 });
-check('sound switches off in two taps', soundOff === false, `sound=${soundOff}`);
+check('the sound switch flips in two taps',
+  soundAfter === !soundBefore, `${soundBefore} -> ${soundAfter}`);
 await page.reload();
 await page.waitForTimeout(700);
-const stillOff = await page.evaluate(() => {
+const soundStill = await page.evaluate(() => {
   const raw = localStorage.getItem('lerninseln.save.v1');
   return raw ? JSON.parse(raw).sound : null;
 });
-check('and stays off across a reload', stillOff === false, `sound=${stillOff}`);
+check('and survives a reload', soundStill === soundAfter, `sound=${soundStill}`);
 await page.evaluate(() => {
   const raw = JSON.parse(localStorage.getItem('lerninseln.save.v1') ?? '{}');
   localStorage.setItem('lerninseln.save.v1', JSON.stringify({ ...raw, sound: true }));
@@ -369,7 +416,7 @@ await ctx.setOffline(true);
 await page.goto(BASE).catch(() => { /* the assertion below is the test */ });
 await page.waitForTimeout(900);
 check('the app loads with the network disabled',
-  await page.locator('.island-card').count() === 2);
+  await page.locator('.island-card').count() === 3);
 await ctx.setOffline(false);
 
 // ------------------------------------------------------------ no noise

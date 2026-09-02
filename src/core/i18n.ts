@@ -28,6 +28,8 @@ const DE = {
   'island.mathe.sub': 'Rechnen, zählen, Zahlen finden',
   'island.sprache': 'Die Insel der Sprache',
   'island.sprache.sub': 'Laute, Silben, Wörter',
+  'island.entdecker': 'Die Insel der Entdecker',
+  'island.entdecker.sub': 'Formen und Muster — ganz ohne Lesen',
 
   // ------------------------------------------------------- the island
   'island.back': 'Zurück',
@@ -57,6 +59,8 @@ const DE = {
   'house.silben': 'Das Haus der Silben',
   'house.woerter': 'Das Haus der ersten Wörter',
   'house.reime': 'Das Haus der Reime',
+  'house.formen': 'Das Haus der Formen',
+  'house.muster': 'Das Haus der Muster',
 
   // One line per house, for the grown-up sitting next to the child.
   // Deliberately says what is PRACTISED, not what the game does — a
@@ -70,6 +74,8 @@ const DE = {
   'house.silben.sub': 'Silben klatschen',
   'house.woerter.sub': 'Erstes Lesen — Bild und Wort zusammenbringen',
   'house.reime.sub': 'Reime hören — Haus und Maus',
+  'house.formen.sub': 'Kreis, Dreieck, Quadrat — hören und finden',
+  'house.muster.sub': 'Muster fortsetzen — was kommt als Nächstes?',
 
   // ------------------------------------------------------ the rounds
   'round.progress': 'Aufgabe {n} von {total}',
@@ -98,6 +104,7 @@ const DE = {
   'say.pickHouse': 'Tippe auf ein Haus, dann geht es los.',
   'say.mathe': 'Die Insel der Zahlen. Hier wohnen die Zahlen.',
   'say.sprache': 'Die Insel der Sprache. Hier wohnen die Wörter.',
+  'say.entdecker': 'Die Insel der Entdecker. Hier gibt es Formen und Muster.',
 
   'say.verliebteZahlenErst':
     'Willkommen im Haus der verliebten Zahlen! Zwei Zahlen sind verliebt, wenn sie zusammen zehn ergeben. Die drei und die sieben zum Beispiel. Tippe einfach auf die Zahl, die dazu passt.',
@@ -130,6 +137,24 @@ const DE = {
   'say.reimeErst':
     'Willkommen im Haus der Reime! Zwei Wörter reimen sich, wenn sie hinten gleich klingen. Haus und Maus zum Beispiel. Welches Wort reimt sich?',
   'say.reime': 'Die Reime! Welches Wort klingt hinten gleich?',
+
+  'say.formenErst':
+    'Willkommen im Haus der Formen! Ich sage dir eine Form, und du tippst sie an. Zum Beispiel: den Kreis.',
+  'say.formen': 'Die Formen! Hör zu und tippe die richtige an.',
+
+  'say.musterErst':
+    'Willkommen im Haus der Muster! Schau dir die Reihe an. Welche Form kommt als Nächstes?',
+  'say.muster': 'Die Muster! Was kommt als Nächstes?',
+
+  // The shape names, spoken one at a time. Every question in the Haus
+  // der Formen is one of these and nothing else, which is what lets
+  // that house work with no word on the screen at all.
+  'say.formKreis': 'Tippe auf den Kreis.',
+  'say.formDreieck': 'Tippe auf das Dreieck.',
+  'say.formQuadrat': 'Tippe auf das Quadrat.',
+  'say.formRechteck': 'Tippe auf das Rechteck.',
+  'say.formStern': 'Tippe auf den Stern.',
+  'say.formHerz': 'Tippe auf das Herz.',
 
   'say.wellDone1': 'Das hast du toll gemacht.',
   'say.wellDone2': 'Super! Ich freue mich.',

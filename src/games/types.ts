@@ -16,7 +16,11 @@ export type Prompt =
   /** Double this number. Shown as two ten-frames filling together. */
   | { kind: 'doppel'; n: number }
   /** A spoken word. The child hears it; nothing is written. */
-  | { kind: 'wort'; wort: string; audio: string; zeige: boolean };
+  | { kind: 'wort'; wort: string; audio: string; zeige: boolean }
+  /** "Tippe auf den Kreis." The shape is named aloud, never written. */
+  | { kind: 'form'; frage: string }
+  /** A row of shapes with the last one missing. */
+  | { kind: 'muster'; reihe: string[] };
 
 export interface Question {
   /**
@@ -25,7 +29,13 @@ export interface Question {
    */
   fact: string;
   prompt: Prompt;
-  /** The tappable cards, as they are labelled. */
+  /**
+   * The tappable cards.
+   *
+   * A plain string is written on the card. A string beginning `form:`
+   * is DRAWN on it instead — which is how the two houses on the Insel
+   * der Entdecker ask a question with no words on screen at all.
+   */
   choices: string[];
   /** Index into `choices`. */
   correct: number;

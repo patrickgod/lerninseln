@@ -19,6 +19,7 @@ import type { Game, Question, Prompt } from './types.js';
 import { strengthOf } from '../core/state.js';
 import { WOERTER, REIME } from './woerter.js';
 import { hasBild } from './wortbilder.js';
+import { FORMEN, musterZeile, type Form } from './formen.js';
 
 /** Deterministic-enough randomness. Rounds should not be reproducible. */
 function pickOne<T>(arr: T[]): T {
@@ -313,6 +314,80 @@ export const reime: Game = {
   },
 };
 
+// -------------------------------------------------- Haus der Formen
+
+/**
+ * The shape is NAMED aloud and the cards are shapes.
+ *
+ * No word appears on the screen at any point, which makes this the one
+ * house a child who cannot read a single letter can play completely
+ * unaided — and it is still teaching vocabulary, because hearing
+ * "Dreieck" while tapping a triangle is exactly how the word gets
+ * attached to the thing.
+ */
+export const formen: Game = {
+  id: 'formen',
+  facts: () => FORMEN.map((f) => `fo:${f}`),
+  next(pick) {
+    const fact = pick(this.facts());
+    const want = fact.slice(3) as Form;
+    const wrong = shuffle(FORMEN.filter((f) => f !== want)).slice(0, 3);
+    return {
+      fact,
+      prompt: { kind: 'form', frage: want },
+      choices: shuffle([want, ...wrong]).map((f) => `form:${f}`),
+      correct: -1,
+    } as Question;
+  },
+};
+
+// -------------------------------------------------- Haus der Muster
+
+/**
+ * A row of shapes with the last one missing.
+ *
+ * Continuing a pattern is one of the genuinely load-bearing skills in
+ * early maths: it is the same reasoning that becomes "what comes next
+ * in this number sequence", years before any numbers are involved. And
+ * like the shapes house, it needs no reading at all.
+ */
+export const muster: Game = {
+  id: 'muster',
+  // The fact is the KIND of pattern rather than the shapes in it, so
+  // the scheduler practises the ones a child finds hard rather than
+  // hunting for a particular pair of colours.
+  facts: () => ['mu:ab', 'mu:aabb', 'mu:abb'],
+  next(pick) {
+    const fact = pick(this.facts());
+    const seed = Math.floor(Math.random() * 1e6);
+    let z = musterZeile(seed);
+    // Nudge the seed until the generated pattern is the kind that was
+    // asked for. Cheap, and much simpler than threading the kind
+    // through the generator.
+    const wanted = fact.slice(3);
+    for (let i = 0; i < 40; i++) {
+      const kind = kindOf(z.row);
+      if (kind === wanted) break;
+      z = musterZeile(seed + i * 7919);
+    }
+    const wrong = shuffle(FORMEN.filter((f) => f !== z.answer)).slice(0, 2);
+    return {
+      fact,
+      prompt: { kind: 'muster', reihe: z.row },
+      choices: shuffle([z.answer, ...wrong]).map((f) => `form:${f}`),
+      correct: -1,
+      // The answer is carried on the prompt so `expectedAnswer` can
+      // find it without re-deriving the pattern.
+      showOnMiss: { kind: 'muster', reihe: [...z.row, z.answer] },
+    } as Question;
+  },
+};
+
+function kindOf(row: string[]): string {
+  if (row[0] === row[1]) return row[2] === row[1] ? 'ab' : 'aabb';
+  return row[1] === row[2] ? 'abb' : 'ab';
+}
+
 // ---------------------------------------------------------------- glue
 
 /**
@@ -349,6 +424,15 @@ function expectedAnswer(gameId: string, q: Question): string {
     }
     case 'woerter':
       return q.fact.slice(3);
+    case 'formen':
+      return `form:${q.fact.slice(3)}`;
+    case 'muster': {
+      // The full row, answer included, is on `showOnMiss`; the last of
+      // it is what the row continues with.
+      const p = q.showOnMiss as Extract<Prompt, { kind: 'muster' }> | undefined;
+      if (!p) return q.choices[0];
+      return `form:${p.reihe[p.reihe.length - 1]}`;
+    }
     case 'reime': {
       // The generator picked one partner out of the family; the answer
       // is whichever card is in the same family as the prompt word.
@@ -370,6 +454,8 @@ export const GAMES: Record<string, Game> = {
   'silben': silben,
   'woerter': woerterLesen,
   'reime': reime,
+  'formen': formen,
+  'muster': muster,
 };
 
 /** Build a whole round: ten questions, no fact twice in a row. */

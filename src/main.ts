@@ -24,6 +24,7 @@ import { buildRound } from './games/games.js';
 import type { Question, Prompt } from './games/types.js';
 import { WOERTER, stem } from './games/woerter.js';
 import { bildCanvas, hasBild } from './games/wortbilder.js';
+import { formCanvas, type Form } from './games/formen.js';
 
 const QUESTIONS_PER_ROUND = 10;
 
@@ -857,10 +858,20 @@ function drawQuestion(): void {
   // The answer cards are sized for a single digit or letter. A whole
   // word needs a wider card and a much smaller face, or "Pflaumenbaum"
   // runs off both ends of it.
-  const wordy = q.choices.some((c) => c.length > 2);
-  const answers = el('div', `answers${wordy ? ' words' : ''}`);
+  const shapey = q.choices.some((c) => c.startsWith('form:'));
+  const wordy = !shapey && q.choices.some((c) => c.length > 2);
+  const answers = el('div',
+    `answers${shapey ? ' shapes' : wordy ? ' words' : ''}`);
   q.choices.forEach((label, idx) => {
-    const b = el('button', undefined, label);
+    const b = el('button');
+    if (label.startsWith('form:')) {
+      // The card IS the shape. Nothing is written on it, which is the
+      // whole point of this island.
+      b.appendChild(formCanvas(label.slice(5) as Form, shapeScale()));
+      b.setAttribute('aria-label', label.slice(5));
+    } else {
+      b.textContent = label;
+    }
     tap(b, () => onAnswer(idx, b, stageQ, answers));
     answers.appendChild(b);
   });
@@ -922,6 +933,32 @@ function promptView(p: Prompt, q: Question): HTMLElement {
       box.appendChild(r);
       break;
     }
+    case 'form': {
+      // Nothing is drawn for the question: it is spoken, and the
+      // replay button is the only thing on screen. A child who did not
+      // catch it taps the speaker; a child who did looks at the cards.
+      const key = `say.form${p.frage[0].toUpperCase()}${p.frage.slice(1)}`;
+      const speak = el('button', 'speak', '▶');
+      tap(speak, () => sayLine(key));
+      box.appendChild(speak);
+      setTimeout(() => sayLine(key), 240);
+      break;
+    }
+    case 'muster': {
+      const row = el('div', 'muster');
+      for (const f of p.reihe) {
+        const cell = el('div', 'zelle');
+        cell.appendChild(formCanvas(f as Form, Math.max(2, shapeScale() - 1)));
+        row.appendChild(cell);
+      }
+      // The gap at the end, drawn as an empty frame so the question is
+      // "what goes HERE" rather than "what comes after".
+      const gap = el('div', 'zelle luecke');
+      gap.textContent = '?';
+      row.appendChild(gap);
+      box.appendChild(row);
+      break;
+    }
     case 'wort': {
       // The picture and the spoken word are two channels for the same
       // thing, and both are here on purpose: the sound can be off, and
@@ -959,6 +996,11 @@ function promptView(p: Prompt, q: Question): HTMLElement {
  */
 function counterShape(): 'perle' | 'herz' {
   return round && round.house.game === 'verliebte-zahlen' ? 'herz' : 'perle';
+}
+
+/** A shape is 34px at 1x and should nearly fill its card. */
+function shapeScale(): number {
+  return Math.max(2, Math.min(6, Math.floor((window.innerHeight * 0.13) / 34)));
 }
 
 /** The word picture is 40px at 1x, and wants about a fifth of the screen. */

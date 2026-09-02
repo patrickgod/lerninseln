@@ -277,6 +277,33 @@ if (want('einstellungen')) {
   await shot('postkarte');
 }
 
+// The third island: shapes and patterns, both of which ask their
+// question with no word on the screen at all.
+if (want('entdecker')) {
+  for (const [name, label] of [['formen', 'Formen'], ['muster', 'Muster']]) {
+    await page.goto(`http://localhost:${PORT}/`);
+    await page.evaluate(() => {
+      localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+        v: 1, stars: 200, candy: 0, seen: [], placed: [], strength: {},
+        sound: true, voice: false, name: '',
+      }));
+    });
+    await page.reload();
+    await page.waitForTimeout(900);
+    if (name === 'formen') await shot('picker-drei');
+    await page.locator('.island-card').nth(2).tap();
+    await page.waitForTimeout(1300);
+    if (name === 'formen') await shot('insel-entdecker');
+    const lb = page.locator('.house-label').filter({ hasText: label });
+    const bx = await lb.first().boundingBox();
+    if (bx) {
+      await page.touchscreen.tap(bx.x + bx.width / 2, bx.y - 30);
+      await page.waitForTimeout(1400);
+      await shot(name);
+    }
+  }
+}
+
 // PORTRAIT. IPAD.md: "Both orientations, or lock one. Decide, do not
 // leave it to chance." A child holds a tablet whichever way it happens
 // to be, and a layout that only works one way round is a layout that

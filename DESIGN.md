@@ -239,6 +239,31 @@ arranges is theirs.
 | Sprache | Das Haus der Silben | 20 Sterne | clapping syllables |
 | Sprache | Das Haus der ersten Wörter | 45 Sterne | first reading: picture to word |
 | Sprache | Das Haus der Reime | 85 Sterne | rhyme awareness, by ear |
+| Entdecker | Das Haus der Formen | from the start | naming shapes, by ear |
+| Entdecker | Das Haus der Muster | 30 Sterne | continuing a pattern |
+
+## The island with no words on it
+
+The Insel der Entdecker exists because of a gap the other two have in
+common: both of them, sooner or later, put something on the screen that
+has to be read or heard as language.
+
+Here the shape is **named aloud** and the answers are **drawings**.
+Nothing is written at any point. That makes it the one island a child
+who cannot read a single letter can play completely unaided — and it is
+still teaching vocabulary, because hearing "Dreieck" while tapping a
+triangle is exactly how the word gets attached to the thing.
+
+Continuing a pattern, in the second house, is one of the genuinely
+load-bearing skills in early maths: it is the same reasoning that
+becomes "what comes next in this number sequence", years before any
+numbers are involved. The patterns are ABAB, AABB and ABB and nothing
+longer, because a six-year-old has to hold the whole rule in their head
+at once for it to be a pattern rather than a puzzle.
+
+Each shape keeps its own colour across every question, which matters
+more than it looks: a child still learning the word "Dreieck" can hold
+on to "the green one" while they learn it, and the two facts converge.
 
 The first rung is deliberately flat: about two good rounds, so a child
 who plays twice on the first evening sees the island change and
