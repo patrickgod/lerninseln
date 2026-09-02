@@ -10,6 +10,7 @@
 import { t } from './core/i18n.js';
 import * as state from './core/state.js';
 import * as audio from './core/audio.js';
+import * as fx from './core/fx.js';
 import { tenFrameCanvas } from './core/tenframe.js';
 import {
   ISLANDS, GRID, island, unlockedHouses, housesOn, buildable,
@@ -26,8 +27,11 @@ import { bildCanvas, hasBild } from './games/wortbilder.js';
 const QUESTIONS_PER_ROUND = 10;
 
 const stage = document.getElementById('stage') as HTMLCanvasElement;
+const fxCanvas = document.getElementById('fx') as HTMLCanvasElement;
+const app = document.getElementById('app') as HTMLDivElement;
 const ui = document.getElementById('ui') as HTMLDivElement;
 const ctx = stage.getContext('2d', { willReadFrequently: true })!;
+const fxCtx = fxCanvas.getContext('2d', { willReadFrequently: true })!;
 
 type Screen = 'picker' | 'island' | 'round';
 
@@ -102,7 +106,11 @@ function resize(): void {
   stage.width = Math.round(w * dpr);
   stage.height = Math.round(h * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  fxCanvas.width = stage.width;
+  fxCanvas.height = stage.height;
+  fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   view = render.fit(w, h, currentIsland);
+  fx.setScale(view.scale);
 }
 
 window.addEventListener('resize', resize);
@@ -115,9 +123,17 @@ function frame(now: number): void {
   if (!started) started = now;
   const time = (now - started) / 1000;
   // A tab that has been asleep hands back an enormous delta and every
-  // animation lurches. Nothing here integrates, but the clamp is here
-  // so that the moment something does, it is already correct.
-  last = Math.min(last + 0.1, time);
+  // animation lurches. The clamp matters now that particles integrate:
+  // without it, coming back from a locked iPad teleports every spark
+  // off the bottom of the screen in one step.
+  const dt = Math.min(0.05, Math.max(0, time - last));
+  last = time;
+
+  // The shake moves the WHOLE app — island, interface and all — because
+  // a shake that only moves the world reads as the world coming loose,
+  // and a shake that moves nothing at all is not a shake.
+  const off = fx.shakeOffset(now);
+  app.style.transform = off.x || off.y ? `translate(${off.x}px, ${off.y}px)` : '';
 
   if (screen === 'island') {
     const dpr = Math.min(3, window.devicePixelRatio || 1);
@@ -133,7 +149,20 @@ function frame(now: number): void {
     if (arriving && now >= arrivingUntil) arriving = null;
     placeLabels();
   }
+
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
+  fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+  fx.update(dt);
+  fx.draw(fxCtx);
+
   requestAnimationFrame(frame);
+}
+
+/** The middle of an element, in CSS pixels. For aiming particles. */
+function centreOf(e: Element): { x: number; y: number } {
+  const r = e.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 }
 
 /**
@@ -379,7 +408,10 @@ function onBuildTap(x: number, y: number): void {
     const d = deco(existing.d);
     state.removeAt(currentIsland, x, y);
     if (d) state.addCandy(d.price);
-    audio.click();
+    audio.pop();
+    const up = render.tileToScreen(view, x, y);
+    fx.burst('staub', up.sx * view.scale, (up.sy - render.LIFT) * view.scale,
+      { n: 6, speed: 70, up: 0.4, gravity: 100, life: 0.4 });
     drawIslandUi();
     return;
   }
@@ -395,7 +427,14 @@ function onBuildTap(x: number, y: number): void {
     return;
   }
   state.place({ d: d.id, i: currentIsland, x, y });
-  audio.thunk();
+  audio.land();
+  // Dust where it landed, and a small kick. Three pixels: a child
+  // holding a tablet 30cm away feels that perfectly well, and anything
+  // that looks dramatic in a screenshot is far too much in the hand.
+  const p2 = render.tileToScreen(view, x, y);
+  fx.burst('staub', p2.sx * view.scale, (p2.sy - render.LIFT) * view.scale,
+    { n: 10, speed: 90, up: 0.2, gravity: 120, life: 0.5 });
+  fx.shake(3);
   holding = null;
   drawIslandUi();
 }
@@ -419,7 +458,7 @@ function showShop(): void {
     if (state.get().candy < d.price) item.disabled = true;
     tap(item, () => {
       if (state.get().candy < d.price) { toast(t('shop.tooExpensive')); return; }
-      audio.click();
+      audio.pop();
       holding = d.id;
       sheet.remove();
       building = true;
@@ -509,7 +548,11 @@ function drawQuestion(): void {
   }));
   const pips = el('div', 'pips');
   for (let i = 0; i < round.qs.length; i++) {
-    pips.appendChild(el('div', `pip ${i < round.i ? 'done' : i === round.i ? 'now' : ''}`));
+    // The pip that was just filled pops once, so progress is felt and
+    // not merely displayed.
+    const justDone = i === round.i - 1;
+    pips.appendChild(el('div',
+      `pip ${i < round.i ? 'done' : i === round.i ? 'now' : ''}${justDone ? ' just' : ''}`));
   }
   top.appendChild(pips);
   top.appendChild(purse());
@@ -641,6 +684,12 @@ function onAnswer(idx: number, btn: HTMLButtonElement, stageQ: HTMLElement, answ
     round.right++;
     btn.classList.add('right');
     audio.chimeRight();
+    audio.pop();
+    // The burst comes off the CARD the child touched, not off the
+    // middle of the screen, so the reaction belongs to the tap.
+    const c = centreOf(btn);
+    fx.burst(round.house.game === 'verliebte-zahlen' ? 'herz' : 'stern',
+      c.x, c.y, { n: 12, speed: 200, up: 0.7, life: 0.85 });
     // The frame completes itself, which is the reward: the picture of
     // the fact the child has just recalled.
     if (q.prompt.kind === 'tenframe' && q.prompt.n >= 0) {
@@ -711,8 +760,27 @@ function finishRound(): void {
   sayOneOf(['say.wellDone1', 'say.wellDone2', 'say.wellDone3']);
 
   clear();
+  fx.clear();
+  fx.rain(window.innerWidth, perfect ? 46 : 26);
+
   const sheet = el('div', 'sheet');
   sheet.appendChild(el('h2', undefined, t('round.done')));
+
+  // The purse starts on what the child had BEFORE the round, and the
+  // stars fly into it one by one. Showing the new total straight away
+  // and a "+7" beside it is a receipt; watching seven stars arrive is
+  // the reward actually happening, and it is the difference between
+  // being told you did well and seeing it.
+  const purseRow = el('div', 'purse big');
+  const starCoin = el('div', 'coin star');
+  const starNum = el('span', undefined, String(before));
+  starCoin.append(el('i'), starNum);
+  const candyCoin = el('div', 'coin candy');
+  const candyNum = el('span', undefined, String(state.get().candy - candy));
+  candyCoin.append(el('i'), candyNum);
+  purseRow.append(starCoin, candyCoin);
+  sheet.appendChild(purseRow);
+
   const reward = el('div', 'reward');
   const s1 = el('div', 'coin star');
   s1.append(el('i'), el('span', undefined, `+${stars}`));
@@ -731,10 +799,23 @@ function finishRound(): void {
       arriving = arrived[0].id;
       arrivingUntil = performance.now() + 2400;
       for (const h of arrived) state.markSeen(h.id);
-      audio.thunk();
       drawIslandUi();
       toast(t('island.newHouse'));
-      sayLine('say.newHouse');
+      // A house arriving is the biggest thing that happens in this app,
+      // so it gets the biggest reaction it is allowed: dust, sparks, a
+      // real thunk and six pixels of kick.
+      const h0 = arrived[0];
+      const hp = render.tileToScreen(view, h0.x, h0.y);
+      const hx = hp.sx * view.scale;
+      const hy = (hp.sy - render.LIFT) * view.scale;
+      setTimeout(() => {
+        audio.land();
+        fx.shake(6, 0.4);
+        fx.burst('staub', hx, hy, { n: 20, speed: 150, up: 0.15, gravity: 160, life: 0.7 });
+        fx.burst('funke', hx, hy - 40, { n: 14, speed: 130, up: 0.8, life: 0.9 });
+        audio.sparkle(5);
+        sayLine('say.newHouse');
+      }, 260);
     } else {
       drawIslandUi();
     }
@@ -742,6 +823,51 @@ function finishRound(): void {
   sheet.appendChild(row);
   ui.appendChild(sheet);
   round = null;
+
+  // Now that the sheet is in the document it has a position, so the
+  // flight can be aimed. Capped at eight of each: ten stars flying one
+  // after another is a queue, and a child waits for it rather than
+  // enjoying it.
+  requestAnimationFrame(() => {
+    flyReward('stern', s1, starCoin, starNum, stars, before, 0.28);
+    flyReward('funke', s2, candyCoin, candyNum, candy,
+      state.get().candy - candy, 0.55);
+  });
+}
+
+/**
+ * Fly a reward into its counter, and count the counter up as they land.
+ *
+ * The number does not simply become the new total: each arrival adds
+ * its share, so the digits climb in step with the things hitting them.
+ */
+function flyReward(
+  kind: 'stern' | 'funke',
+  from: Element, to: Element, num: HTMLElement,
+  amount: number, start: number, delay: number,
+): void {
+  if (amount <= 0) { num.textContent = String(start); return; }
+  const shots = Math.min(8, amount);
+  const a = centreOf(from);
+  const b = centreOf(to);
+  let landed = 0;
+  for (let i = 0; i < shots; i++) {
+    fx.fly(kind, a, b, delay + i * 0.09, () => {
+      landed++;
+      // Share the amount out over the shots, and make the last one
+      // land on the exact total so the arithmetic is never visibly
+      // wrong by a rounding error.
+      const shown = landed >= shots
+        ? start + amount
+        : start + Math.round((amount * landed) / shots);
+      num.textContent = String(shown);
+      audio.ping(i);
+      fx.burst(kind, b.x, b.y, { n: 4, speed: 90, up: 0.3, life: 0.4 });
+      to.classList.remove('bump');
+      void (to as HTMLElement).offsetWidth;
+      to.classList.add('bump');
+    });
+  }
 }
 
 // ------------------------------------------------------------- startup

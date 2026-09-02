@@ -109,6 +109,98 @@ export function thunk(): void {
   tone(261.63, 0.02, 0.22, 0.12);
 }
 
+// ------------------------------------------------------------ the juice
+//
+// Patrick asked for "subtile Sound Effekte", and subtle is the operative
+// word: ART-DIRECTION.md's rule is that a sound is the quiet
+// confirmation of something you already SAW, never an announcement.
+// Everything below sits under the picture.
+//
+// All synthesised, none downloaded. A sine with a soft attack and a long
+// tail is forty lines of code, weighs nothing, works offline, and cannot
+// be the wrong sample.
+
+/**
+ * Sparkle: a short rising arpeggio. Stars arriving, a purchase landing.
+ *
+ * Pentatonic on purpose — five notes that cannot form a dissonance
+ * between them, so playing several at once or on top of each other
+ * still sounds like music rather than like a slot machine.
+ */
+export function sparkle(n = 4): void {
+  const scale = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
+  for (let i = 0; i < n; i++) {
+    const f = scale[Math.min(scale.length - 1, i + Math.floor(Math.random() * 2))];
+    tone(f, i * 0.055, 0.45 - i * 0.03, 0.13);
+  }
+}
+
+/** A single bright ping, for one star landing in the counter. */
+export function ping(i = 0): void {
+  const scale = [659.25, 783.99, 880.0, 987.77, 1046.5, 1174.7];
+  tone(scale[i % scale.length], 0, 0.30, 0.14);
+}
+
+/**
+ * A soft pop. Particles bursting, a card being chosen.
+ *
+ * A pitch envelope rather than a fixed note: the frequency drops
+ * through the first 40ms, which is what makes a bubble sound like a
+ * bubble instead of like a beep.
+ */
+export function pop(): void {
+  if (!on() || !ctx || !master) return;
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const env = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(720 + Math.random() * 260, t);
+  osc.frequency.exponentialRampToValueAtTime(240, t + 0.05);
+  env.gain.setValueAtTime(0, t);
+  env.gain.linearRampToValueAtTime(0.13, t + 0.008);
+  env.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+  osc.connect(env);
+  env.connect(master);
+  osc.start(t);
+  osc.stop(t + 0.2);
+}
+
+/**
+ * Dust and air: filtered noise, for something landing or a screen
+ * turning over. This is the one sound in the game that is not a tone,
+ * and it is the one that makes a thunk feel like weight rather than
+ * like a note.
+ */
+export function whoosh(dur = 0.28, cutoff = 1400): void {
+  if (!on() || !ctx || !master) return;
+  const t = ctx.currentTime;
+  const len = Math.floor(ctx.sampleRate * dur);
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const filt = ctx.createBiquadFilter();
+  filt.type = 'lowpass';
+  filt.frequency.setValueAtTime(cutoff, t);
+  filt.frequency.exponentialRampToValueAtTime(220, t + dur);
+  const env = ctx.createGain();
+  env.gain.setValueAtTime(0, t);
+  env.gain.linearRampToValueAtTime(0.16, t + 0.02);
+  env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(filt);
+  filt.connect(env);
+  env.connect(master);
+  src.start(t);
+  src.stop(t + dur + 0.05);
+}
+
+/** A building landing on the ground: the thunk, plus its dust. */
+export function land(): void {
+  thunk();
+  whoosh(0.34, 900);
+}
+
 // ---------------------------------------------------------------- voice
 //
 // Two sources, in order of preference:

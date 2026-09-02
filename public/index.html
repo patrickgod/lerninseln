@@ -23,6 +23,15 @@
 <div id="app">
   <canvas id="stage"></canvas>
   <div id="ui"></div>
+  <!-- Particles, on TOP of everything.
+       Its own canvas because the round screen is DOM and the island is
+       canvas, and a burst of hearts has to be able to happen over
+       either. Above the interface rather than below it, because the
+       round-end sheet draws a dark panel across the whole screen: with
+       the particles underneath, the stars flying into the counter -
+       the one moment the whole reward is built around - were hidden
+       behind it. It never catches a tap; see pointer-events below. -->
+  <canvas id="fx"></canvas>
 </div>
 <script type="module" src="main.js"></script>
 </body>

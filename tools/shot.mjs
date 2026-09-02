@@ -83,6 +83,27 @@ if (await answers.count()) {
   if (want('answered')) await shot('answered');
 }
 
+// Play the rest of the round correctly — the partner to ten is ten
+// minus the numeral — and catch the reward sheet while the stars are
+// still in the air.
+if (want('fertig')) {
+  for (let i = 0; i < 20; i++) {
+    if (await page.locator('.sheet').count() > 0) break;
+    if (await answers.count() === 0) break;
+    const shown = Number(await page.locator('.numeral').first().textContent());
+    const card = page.locator('.answers button', { hasText: new RegExp(`^${10 - shown}$`) });
+    if (await card.count() === 0) break;
+    await card.first().tap();
+    // Short enough that the last one catches the reward sheet while the
+    // stars are still in the air — which is the thing worth looking at.
+    await page.waitForTimeout(await page.locator('.answers button').count() ? 2000 : 1500);
+    if (await page.locator('.sheet').count() > 0) break;
+  }
+  await page.waitForTimeout(1250);
+  await page.screenshot({ path: 'shots/fertig.png' });
+  console.log('  shots/fertig.png');
+}
+
 // The shop.
 await page.goto(`http://localhost:${PORT}/`);
 await page.waitForTimeout(600);
