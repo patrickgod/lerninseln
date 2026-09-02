@@ -109,25 +109,66 @@ check('tapping a house opens a round', await page.locator('.answers button').cou
 await measureButtons('round');
 
 // ------------------------------------------------- a whole round, by tap
+//
+// The round is played CORRECTLY, by working the answer out from what is
+// on screen: this house asks for the partner to ten, so the right card
+// is 10 minus the numeral.
+//
+// The first version tapped at random and then asserted that some stars
+// had been awarded. That is not a test, it is a coin toss — with three
+// cards, ten random taps miss every single time about once in sixty
+// runs, and it duly went red on a build that was completely fine. It
+// also asserted almost nothing: a game that scored the wrong card as
+// correct would have passed it.
+//
+// Playing deliberately checks the whole chain instead — the ten pairs,
+// the shuffled cards, the scoring, and the currency — and it gives the
+// same answer every time.
 
 const answers = page.locator('.answers button');
-let asked = 0;
-for (let i = 0; i < 40 && await answers.count() > 0; i++) {
-  const n = await answers.count();
-  if (n === 0) break;
-  await answers.nth(Math.floor(Math.random() * n)).tap();
-  asked++;
-  await page.waitForTimeout(2400);
-  if (await page.locator('.sheet').count() > 0) break;
+
+async function playRound(correctly) {
+  let asked = 0;
+  for (let i = 0; i < 40; i++) {
+    if (await answers.count() === 0) break;
+    const n = await answers.count();
+    if (correctly) {
+      const shown = Number(await page.locator('.numeral').first().textContent());
+      const want = String(10 - shown);
+      const card = page.locator('.answers button', { hasText: new RegExp(`^${want}$`) });
+      if (await card.count() === 0) {
+        check(`the partner of ${shown} is on a card`, false,
+          `cards: ${(await answers.allTextContents()).join(' ')}`);
+        return asked;
+      }
+      await card.first().tap();
+    } else {
+      await answers.nth(Math.floor(Math.random() * n)).tap();
+    }
+    asked++;
+    // A hit advances after 820ms, a miss after 700 + 1400. Waiting for
+    // the next question rather than for a fixed time would be better
+    // still, but the DOM is rebuilt wholesale so there is no stable
+    // node to wait on.
+    await page.waitForTimeout(2400);
+    if (await page.locator('.sheet').count() > 0) break;
+  }
+  return asked;
 }
+
+const asked = await playRound(true);
 check('a whole round can be played with taps only',
   await page.locator('.sheet').count() > 0, `${asked} answers given`);
 
-const stars = await page.evaluate(() => {
+const save = await page.evaluate(() => {
   const raw = localStorage.getItem('lerninseln.save.v1');
-  return raw ? JSON.parse(raw).stars : null;
+  return raw ? JSON.parse(raw) : null;
 });
-check('finishing a round awards stars', typeof stars === 'number' && stars > 0, `stars=${stars}`);
+const stars = save ? save.stars : null;
+// Ten right out of ten: one star each, and the perfect-round bonus on
+// top of the sweets. Exact, because every part of it is deterministic.
+check('ten correct answers award ten stars', stars === 10, `stars=${stars}`);
+check('a perfect round pays the bonus', save && save.candy === 15, `candy=${save && save.candy}`);
 
 // ------------------------------------------------------------- reload
 
@@ -138,6 +179,33 @@ const after = await page.evaluate(() => {
   return raw ? JSON.parse(raw).stars : null;
 });
 check('progress survives a reload', after === stars, `${stars} -> ${after}`);
+
+// ----------------------------------------------------- a round of misses
+//
+// The other half of the promise: a child who gets everything wrong must
+// still reach the end, still be paid something, and never see a screen
+// that says they did badly. Random taps are exactly right HERE, because
+// the assertion is about surviving whatever happens rather than about a
+// score.
+
+await page.locator('.island-card').first().tap();
+await page.waitForTimeout(800);
+const box2 = await page.locator('#stage').boundingBox();
+await page.touchscreen.tap(box2.x + box2.width / 2, box2.y + box2.height / 2 + 10);
+await page.waitForTimeout(800);
+const asked2 = await playRound(false);
+check('a round survives being answered at random',
+  await page.locator('.sheet').count() > 0, `${asked2} answers given`);
+
+const save2 = await page.evaluate(() => {
+  const raw = localStorage.getItem('lerninseln.save.v1');
+  return raw ? JSON.parse(raw) : null;
+});
+check('stars never go down', save2 && save2.stars >= stars, `${stars} -> ${save2 && save2.stars}`);
+check('even a round of misses pays something',
+  save2 && save2.candy > (save ? save.candy : 0), `candy=${save2 && save2.candy}`);
+check('there is no screen that says you did badly',
+  !/falsch|leider|schade|verloren/i.test(await page.locator('.sheet').innerText()));
 
 // ------------------------------------------------------------ offline
 //
