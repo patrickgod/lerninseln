@@ -229,14 +229,16 @@ arranges is theirs.
 
 ## The houses, and the ladder
 
-| island | house | opens at |
-|---|---|---|
-| Zahlen | Das Haus der verliebten Zahlen | from the start |
-| Zahlen | Das Haus der Nachbarzahlen | 12 Sterne |
-| Zahlen | Das Haus der Rechenmeister | 40 Sterne |
-| Zahlen | Das Haus der Zwillinge | 80 Sterne |
-| Sprache | Das Haus der ersten Laute | from the start |
-| Sprache | Das Haus der Silben | 20 Sterne |
+| island | house | opens at | what it practises |
+|---|---|---|---|
+| Zahlen | Das Haus der verliebten Zahlen | from the start | partners to ten, both ways |
+| Zahlen | Das Haus der Nachbarzahlen | 12 Sterne | predecessor and successor to 20 |
+| Zahlen | Das Haus der Rechenmeister | 40 Sterne | plus and minus to 10 |
+| Zahlen | Das Haus der Zwillinge | 80 Sterne | doubling to 20 |
+| Sprache | Das Haus der ersten Laute | from the start | initial sounds, from a picture |
+| Sprache | Das Haus der Silben | 20 Sterne | clapping syllables |
+| Sprache | Das Haus der ersten Wörter | 45 Sterne | first reading: picture to word |
+| Sprache | Das Haus der Reime | 85 Sterne | rhyme awareness, by ear |
 
 The first rung is deliberately flat: about two good rounds, so a child
 who plays twice on the first evening sees the island change and
@@ -265,14 +267,81 @@ The lines are generated at build time and shipped as MP3s, so the
 running app still makes no network calls; see README.md for the current
 state of that.
 
+## The Zahlenfreunde
+
+The original argument in this document — *the collectible IS the
+learning object* — was left behind when the meadow became an island,
+and it is back.
+
+Each pair of numbers that makes ten is a pair of small creatures. A
+pair moves onto the maths island when **both** of its facts are at full
+strength, because `7 → 3` and `3 → 7` are different retrievals to a
+beginner and a child who can do one and not the other has not learned
+the pair. They wander in twos and never separate, each pair with its
+own corner of the ground around the Haus der verliebten Zahlen.
+
+Six pairs to find. Looking at the island and seeing the 6 and the 4
+walking together is itself a recall of the fact — and the gaps are
+visible without a single number on screen, which is a progress bar a
+six-year-old reads without being taught how.
+
+## A living island
+
+Everything the child builds changes what lives there. Three trees bring
+birds; a pond brings ducks; a fence gets a sheep; a vegetable patch gets
+hens; a flower bed gets butterflies; a hive brings bees; a bench gets a
+cat; five trees bring a fox; the lighthouse brings a boat across the
+water.
+
+This is the difference between a shop and a world. Buying a pond and
+later noticing that the ducks came **on their own** teaches a child
+about cause and effect; a duck you simply bought teaches them about a
+shop. It also means the expensive things keep paying out after the
+purchase.
+
+All of it is stateless — a pure function of the clock and what has been
+placed — so nothing accumulates, nothing is lost, and a week away costs
+nothing.
+
+## Day and night
+
+The island reads the real clock, so a child who plays after dinner sees
+a different island from the one they saw after school. Not a tint: every
+sprite steps down its own ramp and the lights step **up**, which is why
+dusk reads as the lanterns coming on rather than as the island being
+switched off.
+
+Night is deliberately not very dark. Two ramp steps in, most colours
+have clamped to the bottom of their ramp and the picture loses its
+contrast — and a darker island would be harder for a six-year-old to
+read at bedtime and no more atmospheric. What says "night" is small warm
+lights doing something a daytime island cannot: lit windows, a lantern,
+a campfire, and fireflies over the wood.
+
+## Juice, and the one place it must not go
+
+Patrick asked for animation, sound effects and screen shake. This
+document's older rule — *nothing flashes, pulses or demands* — is not
+against that. It is against effects the app starts on its own. So:
+
+**Every effect is a response to something the child just did. Nothing
+fires while they are sitting still, and nothing fires on a mistake.**
+
+A screen shake on a wrong answer is the most obvious thing to build and
+it would be a small act of violence against a six-year-old who is
+already unsure. The shake fires on a house arriving, a building being
+placed and a round finishing. Three pixels for a building, six for a
+house: a child holds a tablet 30cm from their face, and anything that
+looks dramatic in a screenshot is far too much in the hand.
+
 ## Still open
 
-* **Pictures for the Anlaute house.** It currently relies on hearing the
-  word. A drawn apple, ball and igel would make it work with the sound
-  off, which matters in a classroom.
-* **A settings screen.** Sound and voice are already two booleans in the
-  save with nothing to toggle them.
 * **The spaced repetition is in and invisible.** Every fact carries a
   strength of 0..3 and weak facts come round four times as often. It has
   never been watched over a real fortnight, which is the only way to
   know whether the tilt is right.
+* **Pictures for the rest of the word list.** Twelve of the forty-four
+  words have one, and only those twelve can appear in the two houses
+  that need a picture.
+* **A third island.** The machinery takes a seed; the content is the
+  work.
