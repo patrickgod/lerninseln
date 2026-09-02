@@ -199,7 +199,7 @@ export const HOUSES: HouseDef[] = [
     nameKey: 'house.muster',
     sayKey: 'say.muster',
     stars: 30,
-    x: 6, y: 10,
+    x: 11, y: 11,
     roof: 'slate',
     game: 'muster',
   },
