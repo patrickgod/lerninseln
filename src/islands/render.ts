@@ -23,6 +23,7 @@ import { GRID, isLand, isSand, island, unlockedHouses, housesOn, type HouseDef }
 import * as S from './sprites.js';
 import * as state from '../core/state.js';
 import { deco } from './decor.js';
+import * as life from './life.js';
 
 const TW = S.TILE_W;
 const TH = S.TILE_H;
@@ -155,7 +156,13 @@ function scenery(islandId: string): { x: number; y: number; seed: number }[] {
 const sceneryCache = new Map<string, { x: number; y: number; seed: number }[]>();
 function sceneryOf(islandId: string): { x: number; y: number; seed: number }[] {
   let s = sceneryCache.get(islandId);
-  if (!s) { s = scenery(islandId); sceneryCache.set(islandId, s); }
+  if (!s) {
+    s = scenery(islandId);
+    sceneryCache.set(islandId, s);
+    // The wood is where the birds circle and where the fox lives, so
+    // its centre is worked out once here rather than every frame.
+    life.setWood(islandId, s);
+  }
   return s;
 }
 
@@ -298,6 +305,10 @@ export function draw(
 
   const hits: HouseHit[] = [];
 
+  // Everything that walks. A pure function of the clock and what has
+  // been built, so it costs nothing to compute afresh every frame.
+  const alive = life.critters(o.islandId, o.time, placed, trees.length);
+
   // TWO PASSES, and the reason is the coastline.
   //
   // In one pass, the sea tile in FRONT of a coastal land tile is drawn
@@ -334,6 +345,15 @@ export function draw(
         ctx.drawImage(f.c, Math.round(sx - f.ax), Math.round(sy - f.ay));
       }
     }
+  }
+
+  // A boat, if a lighthouse was built to guide it. Drawn with the sea,
+  // so the island passes in front of it.
+  const bt = life.boat(o.islandId, o.time, placed);
+  if (bt) {
+    const bs = tileToScreen(v, bt.x, bt.y);
+    const b = bake('boat', () => S.boat(7));
+    ctx.drawImage(b.c, Math.round(bs.sx - b.ax), Math.round(bs.sy - b.ay));
   }
 
   // ------------------------------------------------- pass 2: the land
@@ -430,7 +450,32 @@ export function draw(
         const b = bake(`w:${treeKind}:${tree.seed % 64}`, () => S.wildTree(treeKind, tree.seed % 64 + 1));
         ctx.drawImage(b.c, Math.round(sx - b.ax), Math.round(sy - b.ay));
       }
+
+      // Anything alive standing on this tile, drawn in the same pass so
+      // it is occluded by the row in front of it. Its position is a
+      // float; only which tile it belongs to is rounded.
+      for (const c of alive) {
+        if (Math.round(c.x) !== x || Math.round(c.y) !== y) continue;
+        const cs = tileToScreen(v, c.x, c.y);
+        const b = decoSprite(c.art, c.seed % 97 + 1);
+        ctx.drawImage(b.c, Math.round(cs.sx - b.ax), Math.round(cs.sy - LIFT - b.ay));
+      }
     }
+  }
+
+  // ---------------------------------------------- pass 3: what is flying
+  // Birds and butterflies are in the AIR, so they are not part of the
+  // painter order at all — they go over everything, offset upward by
+  // their height.
+  for (const f of life.butterflies(o.time, placed)) {
+    const fs = tileToScreen(v, f.x, f.y);
+    const b = bake(`bfly:${f.frame}:${f.seed % 4}`, () => S.butterfly(f.frame, f.seed % 4));
+    ctx.drawImage(b.c, Math.round(fs.sx - b.ax), Math.round(fs.sy - LIFT - f.h - b.ay));
+  }
+  for (const f of life.birds(o.islandId, o.time, trees.length)) {
+    const fs = tileToScreen(v, f.x, f.y);
+    const b = bake(`bird:${f.frame}`, () => S.bird(f.frame));
+    ctx.drawImage(b.c, Math.round(fs.sx - b.ax), Math.round(fs.sy - LIFT - f.h - b.ay));
   }
 
   ctx.restore();

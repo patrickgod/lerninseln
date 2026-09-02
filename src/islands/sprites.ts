@@ -424,143 +424,263 @@ export function pond(seed: number): Sprite {
 
 // ------------------------------------------------------------- animals
 
-/**
- * The shared body plan.
- *
- * The first version was an ellipse with two dark pixels for legs, and
- * at 20 pixels across every animal came out as the same grey lump —
- * Tidegarden's sheep-that-read-as-white-pebbles, repeated. What makes a
- * small animal legible is not detail, it is SILHOUETTE: four visible
- * legs with daylight between them, a head that breaks the body outline,
- * and one saturated accent. So the bodies here are bigger, the legs are
- * two pixels wide and three tall, and every animal gets one feature
- * that no other animal has.
- */
-function critter(
-  p: Px, cx: number, baseY: number, body: Ramp, w: number, h: number,
-): void {
-  // legs, drawn first so the body sits over their tops
-  for (const lx of [-Math.round(w * 0.6), -Math.round(w * 0.15),
-                    Math.round(w * 0.25), Math.round(w * 0.65)]) {
-    for (let j = 0; j < 3; j++) {
-      p.set(cx + lx, baseY - j, shade(body, 1));
-      p.set(cx + lx + 1, baseY - j, shade(body, 0));
-    }
-  }
-  const cy = baseY - 3 - h;
-  p.ellipse(cx, cy, w, h, shade(body, 2));
-  // turned away from the light
-  p.ellipse(cx + Math.round(w * 0.3), cy + Math.round(h * 0.4),
-    Math.round(w * 0.65), Math.round(h * 0.6), shade(body, 1));
-  // catching it
-  p.ellipse(cx - Math.round(w * 0.3), cy - Math.round(h * 0.35),
-    Math.round(w * 0.55), Math.round(h * 0.5), shade(body, 3));
-}
+// Every animal is now drawn on its own.
+//
+// There used to be a shared `critter()` body plan here — an ellipse
+// with four dots for legs — and it is why the first pass produced five
+// animals that all read as the same grey lump. A shared plan is the
+// right instinct for a family of BUILDINGS, where the anatomy really
+// is the same, and the wrong one for animals, where the whole job is
+// to make each silhouette unmistakable at twenty pixels. The hen is
+// upright, the cat sits, the duck holds its head up on a neck, the
+// sheep is bright with a dark head outside the fleece, and the fox is
+// a triangle with a brush. None of that survives being generalised.
 
 export function sheep(seed: number): Sprite {
   const p = new Px(30, 28);
   const baseY = p.h - 1 - TILE_H / 2;
-  const rn = rand(seed);
   const cx = 16;
-  critter(p, cx, baseY, P.wool, 8, 5);
-  // Fleece: bumps that break the silhouette. This is the entire
-  // difference between a sheep and a white pebble.
-  for (let i = 0; i < 11; i++) {
-    const a = Math.PI * 0.9 + rn() * Math.PI * 1.2;
-    p.ellipse(cx + Math.round(Math.cos(a) * 8), baseY - 8 + Math.round(Math.sin(a) * 5),
-      2, 2, shade(P.wool, rn() > 0.5 ? 3 : 4));
+  const rn = rand(seed);
+
+  // Tidegarden's oldest lesson, and it happened here too: the sheep
+  // read as a white pebble until somebody cropped the image and
+  // actually looked. The fix is the same both times — the fleece has
+  // to be BRIGHT and bumpy, and the head has to be DARK and outside
+  // the fleece. Contrast between the two is the whole sprite.
+
+  // legs, dark, and clearly four
+  for (const lx of [-6, -2, 3, 7]) {
+    for (let j = 0; j < 4; j++) p.set(cx + lx, baseY - j, shade(P.stone, 1));
+    p.set(cx + lx + 1, baseY - 1, shade(P.stone, 0));
   }
-  // Head: dark, and OUTSIDE the fleece, which is what says sheep.
-  p.ellipse(cx - 10, baseY - 7, 3, 2, shade(P.stone, 1));
-  p.set(cx - 12, baseY - 8, shade(P.stone, 0));
-  p.set(cx - 13, baseY - 7, shade(P.stone, 2));
+
+  // fleece: a cloud of overlapping lumps, near white
+  const lumps: [number, number, number][] = [[0, 0, 8], [-5, 1, 5], [5, 1, 5], [-2, -3, 5], [3, -3, 5]];
+  for (const [dx, dy, r] of lumps) {
+    p.ellipse(cx + dx, baseY - 9 + dy, r, Math.round(r * 0.75), shade(P.wool, 3));
+  }
+  for (const [dx, dy, r] of lumps) {
+    p.ellipse(cx + dx - 1, baseY - 10 + dy, Math.round(r * 0.7), Math.round(r * 0.5),
+      shade(P.wool, 4));
+  }
+  // bumps around the upper edge, which is what says fleece and not egg
+  for (let i = 0; i < 10; i++) {
+    const a = Math.PI + (i / 9) * Math.PI;
+    p.ellipse(cx + Math.round(Math.cos(a) * 9), baseY - 9 + Math.round(Math.sin(a) * 6),
+      2, 2, shade(P.wool, rn() > 0.4 ? 4 : 3));
+  }
+
+  // head: dark, on a short neck, WELL clear of the fleece
+  p.ellipse(cx - 11, baseY - 8, 4, 3, shade(P.stone, 1));
+  p.ellipse(cx - 12, baseY - 9, 3, 2, shade(P.stone, 2));
+  p.set(cx - 14, baseY - 7, shade(P.stone, 0));
+  p.set(cx - 12, baseY - 9, INK);
+  // ears
+  p.set(cx - 9, baseY - 11, shade(P.stone, 1));
+  p.set(cx - 8, baseY - 11, shade(P.stone, 0));
+
   finish(p);
-  contact(p, cx, baseY + 1, 20, 10);
+  contact(p, cx, baseY + 1, 22, 11);
   return { px: p, ...anchor(p) };
 }
 
 export function hen(seed: number): Sprite {
-  const p = new Px(24, 26);
+  const p = new Px(24, 28);
   const baseY = p.h - 1 - TILE_H / 2;
   const cx = 12;
-  critter(p, cx, baseY, P.plaster, 5, 4);
-  // head on a neck, comb, beak, and a tail that cocks up
-  p.ellipse(cx - 6, baseY - 12, 3, 3, shade(P.plaster, 4));
-  p.set(cx - 6, baseY - 15, shade(P.fruit, 2));
-  p.set(cx - 7, baseY - 15, shade(P.fruit, 3));
-  p.set(cx - 5, baseY - 15, shade(P.fruit, 1));
-  p.set(cx - 9, baseY - 12, shade(P.citrus, 3));
-  p.set(cx - 10, baseY - 12, shade(P.citrus, 2));
-  p.set(cx - 8, baseY - 13, INK);
-  for (let i = 0; i < 4; i++) p.set(cx + 7 + i, baseY - 10 - i, shade(P.plaster, 1));
-  for (let i = 0; i < 3; i++) p.set(cx + 7 + i, baseY - 9 - i, shade(P.plaster, 2));
-  void seed;
+
+  // A hen is UPRIGHT and top-heavy, with a comb and a tail fan. The
+  // first one lay flat on four legs like a small cow.
+
+  // legs: thin, orange, and clearly two
+  for (const lx of [-2, 2]) {
+    for (let j = 0; j < 4; j++) p.set(cx + lx, baseY - j, shade(P.citrus, 1));
+    p.set(cx + lx - 1, baseY, shade(P.citrus, 2));
+    p.set(cx + lx + 1, baseY, shade(P.citrus, 2));
+  }
+
+  // tail fan, drawn before the body so the body covers its root
+  for (let k = 0; k < 4; k++) {
+    p.line(cx + 4, baseY - 8, cx + 7 + k, baseY - 12 - k, shade(P.plaster, k % 2 ? 1 : 2));
+  }
+
+  // body: an egg standing on end
+  p.ellipse(cx, baseY - 8, 6, 5, shade(P.plaster, 2));
+  p.ellipse(cx - 2, baseY - 10, 4, 3, shade(P.plaster, 4));
+  p.ellipse(cx + 2, baseY - 7, 4, 3, shade(P.plaster, 1));
+
+  // neck and head
+  p.ellipse(cx - 3, baseY - 15, 3, 3, shade(P.plaster, 3));
+  p.rect(cx - 4, baseY - 14, 3, 4, shade(P.plaster, 3));
+
+  // comb: three red bumps, the single most identifying thing
+  p.set(cx - 4, baseY - 19, shade(P.fruit, 2));
+  p.set(cx - 3, baseY - 19, shade(P.fruit, 3));
+  p.set(cx - 2, baseY - 19, shade(P.fruit, 2));
+  p.set(cx - 3, baseY - 20, shade(P.fruit, 3));
+  // beak and wattle
+  p.set(cx - 6, baseY - 15, shade(P.citrus, 3));
+  p.set(cx - 7, baseY - 15, shade(P.citrus, 2));
+  p.set(cx - 4, baseY - 13, shade(P.fruit, 2));
+  p.set(cx - 4, baseY - 16, INK);
+
   finish(p);
   contact(p, cx, baseY + 1, 16, 8);
+  void seed;
   return { px: p, ...anchor(p) };
 }
 
 export function duck(seed: number): Sprite {
-  const p = new Px(24, 26);
+  const p = new Px(26, 26);
   const baseY = p.h - 1 - TILE_H / 2;
-  const cx = 12;
-  critter(p, cx, baseY, P.wool, 6, 4);
-  // The green head and the flat orange bill: two accents, and nothing
-  // else in the game has either.
-  p.ellipse(cx - 6, baseY - 12, 3, 3, shade(P.pine, 3));
-  p.ellipse(cx - 6, baseY - 13, 2, 2, shade(P.pine, 4));
-  p.rect(cx - 11, baseY - 12, 4, 2, shade(P.citrus, 3));
-  p.set(cx - 11, baseY - 11, shade(P.citrus, 2));
-  p.set(cx - 7, baseY - 13, INK);
-  for (let i = 0; i < 4; i++) p.set(cx + 6 + i, baseY - 9, shade(P.wool, 1));
-  void seed;
+  const cx = 13;
+
+  // The three things that make a duck: a low white body, a green head
+  // held UP on a neck, and a flat orange bill. The first version had
+  // all three and put them in a heap, so it read as a sheep with a
+  // green hat.
+
+  for (const lx of [-3, 2]) {
+    for (let j = 0; j < 3; j++) p.set(cx + lx, baseY - j, shade(P.citrus, 1));
+  }
+
+  // tail, a small wedge off the back
+  for (let k = 0; k < 5; k++) {
+    const h = 2 - Math.round(k * 0.4);
+    for (let j = -h; j <= h; j++) p.set(cx + 6 + k, baseY - 8 + j, shade(P.wool, 2));
+  }
+
+  // body
+  p.ellipse(cx, baseY - 6, 7, 4, shade(P.wool, 3));
+  p.ellipse(cx - 2, baseY - 7, 5, 3, shade(P.wool, 4));
+  p.ellipse(cx + 2, baseY - 5, 5, 2, shade(P.wool, 2));
+
+  // neck, upright and clearly narrower than the body
+  for (let j = 0; j < 7; j++) {
+    p.set(cx - 4, baseY - 9 - j, shade(P.pine, 3));
+    p.set(cx - 3, baseY - 9 - j, shade(P.pine, 2));
+  }
+
+  // head and bill
+  p.ellipse(cx - 4, baseY - 17, 3, 3, shade(P.pine, 3));
+  p.ellipse(cx - 5, baseY - 18, 2, 2, shade(P.pine, 4));
+  p.rect(cx - 10, baseY - 17, 5, 2, shade(P.citrus, 3));
+  p.rect(cx - 10, baseY - 16, 5, 1, shade(P.citrus, 2));
+  p.set(cx - 5, baseY - 18, INK);
+
   finish(p);
   contact(p, cx, baseY + 1, 16, 8);
+  void seed;
   return { px: p, ...anchor(p) };
 }
 
 export function cat(seed: number): Sprite {
-  const p = new Px(28, 28);
+  const p = new Px(26, 30);
   const baseY = p.h - 1 - TILE_H / 2;
   const cx = 13;
-  critter(p, cx, baseY, P.fur, 7, 4);
-  // head with two triangular ears, and the curled tail
-  p.ellipse(cx - 7, baseY - 11, 4, 3, shade(P.fur, 3));
-  p.set(cx - 10, baseY - 15, shade(P.fur, 2));
-  p.set(cx - 9, baseY - 14, shade(P.fur, 3));
-  p.set(cx - 5, baseY - 15, shade(P.fur, 1));
-  p.set(cx - 6, baseY - 14, shade(P.fur, 2));
-  p.set(cx - 9, baseY - 11, shade(P.backlit, 3));
-  p.set(cx - 6, baseY - 11, shade(P.backlit, 3));
-  p.line(cx + 7, baseY - 6, cx + 12, baseY - 12, shade(P.fur, 1));
-  p.line(cx + 8, baseY - 6, cx + 13, baseY - 12, shade(P.fur, 2));
-  p.set(cx + 12, baseY - 14, shade(P.fur, 3));
-  void seed;
+
+  // SITTING, not standing. A standing cat at this size is a brown lump
+  // with a line off the back — which is exactly what the first one was.
+  // A sitting cat is one of the most recognisable silhouettes there is:
+  // a teardrop body, an upright head with two triangles, and the tail
+  // curled round the front.
+
+  // tail first, so the body draws over its root
+  p.line(cx + 5, baseY - 1, cx + 10, baseY - 4, shade(P.fur, 1));
+  p.line(cx + 5, baseY, cx + 11, baseY - 3, shade(P.fur, 2));
+  p.line(cx + 10, baseY - 4, cx + 11, baseY - 9, shade(P.fur, 2));
+  p.set(cx + 11, baseY - 10, shade(P.fur, 3));
+
+  // body: wide at the ground, narrowing to the shoulders
+  for (let j = 0; j <= 13; j++) {
+    const w = Math.round(7 - (j / 13) * 3.4);
+    for (let i = -w; i <= w; i++) {
+      const lit = i < -w * 0.35 ? 3 : i > w * 0.4 ? 1 : 2;
+      p.set(cx + i, baseY - j, shade(P.fur, lit));
+    }
+  }
+  // two front paws on the ground, which is what says "sitting"
+  p.ellipse(cx - 3, baseY, 2, 1, shade(P.fur, 3));
+  p.ellipse(cx + 2, baseY, 2, 1, shade(P.fur, 3));
+
+  // ears, above the head outline where they can actually be seen
+  for (const [ex, lit] of [[cx - 4, 3], [cx + 4, 1]] as [number, number][]) {
+    for (let j = 0; j <= 5; j++) {
+      const half = Math.round((5 - j) * 0.5);
+      for (let i = -half; i <= half; i++) p.set(ex + i, baseY - 20 - j, shade(P.fur, lit));
+    }
+  }
+
+  // head
+  p.ellipse(cx, baseY - 17, 6, 5, shade(P.fur, 2));
+  p.ellipse(cx - 2, baseY - 19, 4, 3, shade(P.fur, 3));
+  for (const ex of [cx - 3, cx + 3]) {
+    p.ellipse(ex, baseY - 17, 1, 2, shade(P.backlit, 3));
+    p.set(ex, baseY - 17, INK);
+  }
+  p.set(cx, baseY - 15, shade(P.blossom, 1));
+  p.set(cx - 1, baseY - 15, shade(P.blossom, 2));
+  // whiskers, outside the head where they read as whiskers
+  p.line(cx - 5, baseY - 15, cx - 9, baseY - 16, shade(P.wool, 3));
+  p.line(cx + 5, baseY - 15, cx + 9, baseY - 16, shade(P.wool, 3));
+
   finish(p);
   contact(p, cx, baseY + 1, 18, 9);
+  void seed;
   return { px: p, ...anchor(p) };
 }
 
 export function fox(seed: number): Sprite {
-  const p = new Px(32, 28);
+  const p = new Px(34, 30);
   const baseY = p.h - 1 - TILE_H / 2;
-  const cx = 14;
-  critter(p, cx, baseY, P.citrus, 7, 4);
-  // The pointed snout, the black socks and the white-tipped brush.
-  p.ellipse(cx - 8, baseY - 11, 4, 3, shade(P.citrus, 3));
-  p.set(cx - 12, baseY - 10, INK);
-  p.set(cx - 11, baseY - 10, shade(P.citrus, 2));
-  p.set(cx - 11, baseY - 15, shade(P.citrus, 1));
-  p.set(cx - 10, baseY - 14, shade(P.citrus, 2));
-  p.set(cx - 6, baseY - 15, shade(P.citrus, 1));
-  p.set(cx - 7, baseY - 14, shade(P.citrus, 2));
-  p.set(cx - 10, baseY - 11, INK);
-  p.ellipse(cx + 11, baseY - 8, 5, 3, shade(P.citrus, 2));
-  p.ellipse(cx + 10, baseY - 9, 4, 2, shade(P.citrus, 3));
-  p.ellipse(cx + 15, baseY - 10, 2, 2, shade(P.wool, 4));
-  void seed;
+  const cx = 16;
+
+  // A fox is a triangle of a head, a low orange body, and a brush held
+  // out behind with a white tip. The first version had the brush and
+  // nothing else legible, so it read as an orange sausage.
+
+  // legs, dark at the paws — fox socks are black and they are half the
+  // reason the silhouette reads
+  for (const lx of [-6, -2, 3, 6]) {
+    for (let j = 0; j < 5; j++) p.set(cx + lx, baseY - j, shade(P.citrus, j < 2 ? 0 : 1));
+  }
+
+  // brush: thick, held out and slightly up, white at the tip
+  for (let k = 0; k < 11; k++) {
+    const h = Math.round(3.4 * Math.sin(Math.min(1, (k + 2) / 12) * Math.PI));
+    for (let j = -h; j <= h; j++) {
+      p.set(cx + 7 + k, baseY - 9 - Math.round(k * 0.5) + j,
+        shade(k > 7 ? P.wool : P.citrus, j < 0 ? 3 : 2));
+    }
+  }
+
+  // body
+  p.ellipse(cx, baseY - 8, 8, 4, shade(P.citrus, 2));
+  p.ellipse(cx - 2, baseY - 9, 6, 3, shade(P.citrus, 3));
+  p.ellipse(cx + 3, baseY - 7, 5, 2, shade(P.citrus, 1));
+  // white chest
+  p.ellipse(cx - 6, baseY - 6, 3, 2, shade(P.wool, 4));
+
+  // ears: two clear triangles, above the head
+  for (const [ex, lit] of [[cx - 11, 3], [cx - 6, 1]] as [number, number][]) {
+    for (let j = 0; j <= 4; j++) {
+      const half = Math.round((4 - j) * 0.6);
+      for (let i = -half; i <= half; i++) p.set(ex + i, baseY - 14 - j, shade(P.citrus, lit));
+    }
+    p.set(ex, baseY - 15, INK);
+  }
+
+  // head and snout
+  p.ellipse(cx - 8, baseY - 12, 5, 4, shade(P.citrus, 3));
+  p.ellipse(cx - 11, baseY - 11, 3, 2, shade(P.wool, 4));
+  p.set(cx - 14, baseY - 11, INK);
+  p.set(cx - 13, baseY - 11, INK);
+  p.set(cx - 8, baseY - 13, INK);
+  p.set(cx - 10, baseY - 13, INK);
+
   finish(p);
-  contact(p, cx, baseY + 1, 20, 10);
+  contact(p, cx, baseY + 1, 22, 11);
+  void seed;
   return { px: p, ...anchor(p) };
 }
 
@@ -606,28 +726,54 @@ export function bench(): Sprite {
 }
 
 export function well(): Sprite {
-  const p = new Px(28, 34);
+  const p = new Px(30, 40);
   const baseY = p.h - 1 - TILE_H / 2;
-  // stone drum
-  p.diamond(14, baseY - 4, 18, 9, shade(P.stone, 2));
-  for (let y = 0; y < 5; y++) {
+  const cx = 15;
+
+  // The first well was a grey blob with an orange trapezoid hovering
+  // over it: the roof was drawn wider than its posts and never met
+  // them, so it read as a hat somebody had thrown. Everything here is
+  // built bottom-up and each piece touches the one below it.
+
+  // stone drum: a diamond rim with a wall under its near edges
+  for (let j = 0; j < 7; j++) {
     for (let x = -9; x <= 9; x++) {
-      const f = 1 - Math.abs(x) / 9;
-      if (y > 4 * f) continue;
-      p.set(14 + x, baseY - 3 + y, shade(P.stone, x < 0 ? 2 : 1));
+      const edge = Math.round(4.5 * (1 - Math.abs(x) / 9));
+      if (j > edge + 3) continue;
+      p.set(cx + x, baseY - 1 + edge - j + 4, shade(P.stone, x < -3 ? 3 : x > 3 ? 1 : 2));
     }
   }
-  p.diamond(14, baseY - 5, 12, 6, shade(P.sea, 1));
-  // posts and a little roof
-  for (const dx of [-7, 7]) for (let j = 0; j < 11; j++) p.set(14 + dx, baseY - 6 - j, shade(P.timber, dx < 0 ? 3 : 1));
-  for (let i = 0; i <= 9; i++) {
-    p.line(14 - 10 + i, baseY - 18 + i, 14 + 10 - i, baseY - 18 + i, shade(P.terracotta, i < 4 ? 3 : 2));
+  p.diamond(cx, baseY - 4, 20, 10, shade(P.stone, 3));
+  p.diamond(cx, baseY - 4, 15, 7, shade(P.stone, 1));
+  p.diamond(cx, baseY - 4, 12, 6, shade(P.sea, 1));
+  p.diamond(cx, baseY - 5, 8, 4, shade(P.sea, 2));
+
+  // two posts, standing ON the rim
+  for (const dx of [-8, 8]) {
+    for (let j = 0; j < 13; j++) {
+      p.set(cx + dx, baseY - 6 - j, shade(P.timber, dx < 0 ? 3 : 1));
+      p.set(cx + dx + 1, baseY - 6 - j, shade(P.timber, dx < 0 ? 2 : 0));
+    }
   }
+  // the crossbeam the bucket hangs from
+  p.line(cx - 8, baseY - 19, cx + 9, baseY - 19, shade(P.timber, 2));
+
+  // a small pitched roof, no wider than the posts plus an eave
+  for (let j = 0; j <= 7; j++) {
+    const w = 10 - j;
+    for (let x = -w; x <= w; x++) {
+      p.set(cx + x, baseY - 20 - j, shade(P.terracotta, x < -w * 0.25 ? 3 : x > w * 0.35 ? 1 : 2));
+    }
+  }
+  p.set(cx, baseY - 28, shade(P.terracotta, 4));
+
+  // bucket on a rope
+  for (let j = 0; j < 4; j++) p.set(cx, baseY - 18 + j, shade(P.dry, 1));
+  p.rect(cx - 2, baseY - 14, 5, 4, shade(P.timber, 2));
+  p.rect(cx - 2, baseY - 14, 5, 1, shade(P.timber, 4));
+
   finish(p);
-  // The ground shadow goes on AFTER the rim. Drawn before it, the
-  // ink outline traces the shadow itself and every tree stands in a
-  // little black box — which is exactly what the first build did.
-  contact(p, 14, baseY + 1, 20, 10);
+  contact(p, cx, baseY + 1, 22, 11);
   return { px: p, ...anchor(p) };
 }
 
@@ -824,4 +970,111 @@ export function plot(seed: number): Sprite {
   finish(p);
   contact(p, cx, baseY + 1, 26, 13);
   return { px: p, ...anchor(p) };
+}
+
+// --------------------------------------------------------- ambient life
+//
+// ART-DIRECTION.md, and it is the rule that decides all of these:
+// *motion is weather, not animation.* None of it is on a loop the eye
+// can catch and none of it is trying to be noticed. The scene should
+// reward a long look and survive a short one.
+//
+// Which is also why these are the only three new sprites the living
+// island needs. The sheep, hens, ducks and cats already exist as
+// decorations; a wandering sheep is the same sprite at a moving
+// position. Only the things that had no still version — a bird in the
+// air, a butterfly, a boat on the water — had to be drawn.
+
+/** A bird, seen from below and behind. Two wing positions. */
+export function bird(frame: number): Sprite {
+  const p = new Px(11, 7);
+  const up = frame === 0;
+  // At this size a bird IS its wings: two strokes meeting at a body.
+  const tip = up ? 1 : 4;
+  p.line(1, tip, 5, 3, shade(P.slate, 1));
+  p.line(9, tip, 5, 3, shade(P.slate, 1));
+  p.line(2, tip + 1, 5, 4, shade(P.slate, 2));
+  p.line(8, tip + 1, 5, 4, shade(P.slate, 2));
+  p.set(5, 3, INK);
+  p.set(5, 4, shade(P.slate, 0));
+  return { px: p, ax: 5, ay: 3 };
+}
+
+/** A butterfly over a flower bed. Two wing positions, and a colour. */
+export function butterfly(frame: number, hue: number): Sprite {
+  const p = new Px(9, 7);
+  const ramps = [P.citrus, P.blossom, P.glow, P.plum];
+  const r = ramps[hue % ramps.length];
+  const w = frame === 0 ? 3 : 2;
+  p.ellipse(4 - w, 3, 2, 2, shade(r, 3));
+  p.ellipse(4 + w, 3, 2, 2, shade(r, 2));
+  p.set(4 - w, 2, shade(r, 4));
+  p.set(4, 3, INK);
+  p.set(4, 4, INK);
+  return { px: p, ax: 4, ay: 3 };
+}
+
+/**
+ * A small boat, crossing the water.
+ *
+ * Only ever seen at a distance and in silhouette, so it is a hull, a
+ * mast and a sail and nothing else. A boat with detail at this size
+ * reads as a smudge; a boat with a clean triangle on top reads as a
+ * boat from right across the screen.
+ */
+export function boat(seed: number): Sprite {
+  const p = new Px(32, 30);
+  const baseY = 22;
+  const cx = 16;
+  const rn = rand(seed);
+
+  // The first boat was a white triangle over a brown smudge: the hull
+  // was drawn dark on dark water and simply vanished. A boat at this
+  // distance is a HULL first — a long shallow shape with a bright deck
+  // line along the top — and a sail second.
+
+  // hull, with a rising bow and stern
+  for (let x = -12; x <= 12; x++) {
+    const k = Math.abs(x) / 12;
+    const top = Math.round(-2 - k * k * 3);
+    const bot = Math.round(4 - k * k * 4);
+    for (let y = top; y <= bot; y++) {
+      const lit = y < top + 2 ? 3 : y > bot - 2 ? 0 : 2;
+      p.set(cx + x, baseY + y, shade(P.timber, lit));
+    }
+  }
+  // the deck line: the one bright stroke that separates the boat from
+  // the sea behind it
+  for (let x = -12; x <= 12; x++) {
+    const k = Math.abs(x) / 12;
+    p.set(cx + x, baseY + Math.round(-2 - k * k * 3), shade(P.plaster, 3));
+  }
+  // a stripe along the side
+  for (let x = -10; x <= 10; x++) {
+    const k = Math.abs(x) / 12;
+    p.set(cx + x, baseY + Math.round(-2 - k * k * 3) + 2, shade(P.fruit, 2));
+  }
+
+  // mast and sail
+  for (let j = 0; j < 16; j++) p.set(cx - 1, baseY - 4 - j, shade(P.timber, 1));
+  for (let j = 0; j < 14; j++) {
+    const w = Math.round((j / 14) * 9);
+    for (let i = 1; i <= w; i++) {
+      p.set(cx + i, baseY - 18 + j, shade(P.plaster, i < w * 0.45 ? 4 : 3));
+    }
+  }
+  if (rn() > 0.4) {
+    p.set(cx + 2, baseY - 19, shade(P.fruit, 3));
+    p.set(cx + 3, baseY - 19, shade(P.fruit, 2));
+  }
+
+  finish(p);
+
+  // A little foam at the waterline, added after the rim so it is not
+  // outlined — it is water, not an object.
+  for (let x = -13; x <= 13; x += 1) {
+    if (Math.random() < 0.45) continue;
+    p.set(cx + x, baseY + 4 - Math.round((Math.abs(x) / 13) ** 2 * 4), shade(P.foam, 2));
+  }
+  return { px: p, ax: cx, ay: baseY + 2 };
 }

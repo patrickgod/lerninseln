@@ -186,7 +186,9 @@ function placeLabels(): void {
     if (!label) continue;
     seen.add(hit.house.id);
     label.style.left = `${Math.round(hit.x + hit.w / 2)}px`;
-    label.style.top = `${Math.round(hit.y + hit.h - 6)}px`;
+    // Tucked right under the doorstep, so the label sits on the tile
+    // the house occupies rather than on the free ground in front of it.
+    label.style.top = `${Math.round(hit.y + hit.h - 14)}px`;
     label.style.visibility = 'visible';
   }
   // A house that did not draw this frame — scrolled off, or not there —

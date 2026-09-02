@@ -467,31 +467,36 @@ button:disabled { opacity: 0.45; }
   text-align: center;
   white-space: nowrap;
   pointer-events: none;
-  /* Readable over grass, sand and water without a solid plate that
-     would cover the island the label is describing. */
-  text-shadow:
-     0 2px 0 rgba(36, 29, 43, 0.55),
-     0 0 6px rgba(36, 29, 43, 0.75);
+  /* A small dark plaque rather than glowing white text.
+     The first version was 19px white with a heavy shadow, and with four
+     houses on a 17x17 island the labels covered the middle of the
+     island — which is exactly where the decorating happens. A label
+     that hides the thing it is labelling is worse than no label.
+     This reads as interface sitting ON the scene rather than as part
+     of it, and it gets out of the way. */
+  background: rgba(23, 40, 62, 0.72);
+  border-radius: 999px;
+  padding: 3px 12px 4px;
+  line-height: 1.15;
 }
 
 .house-label .name {
-  font-size: 19px;
+  font-size: 14px;
   color: var(--plaster);
   letter-spacing: 0.01em;
 }
 
 .house-label .sub {
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--chalk-pale);
-  opacity: 0.92;
+  opacity: 0.85;
 }
 
 /* A plot is quieter than a house, because it is a promise rather than
    a place. */
-.house-label.soon { opacity: 0.72; }
-.house-label.soon .name { font-size: 17px; }
-.house-label.soon .sub { color: var(--glow); }
+.house-label.soon { opacity: 0.8; background: rgba(23, 40, 62, 0.6); }
+.house-label.soon .sub { color: var(--glow); opacity: 1; }
 
 /* ----------------------------------------------------------- the juice */
 

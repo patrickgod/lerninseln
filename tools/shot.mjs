@@ -142,6 +142,38 @@ await page.touchscreen.tap(box2.x + box2.width / 2, box2.y + box2.height / 2 + 1
 await page.waitForTimeout(1200);
 if (want('anlaute')) await shot('anlaute');
 
+// A decorated island, so the ambient life has something to react to:
+// the pond brings ducks, the fence a sheep, the patch hens, the bed
+// butterflies, the bench a cat, the lighthouse a boat.
+if (want('leben')) {
+  await page.goto(`http://localhost:${PORT}/`);
+  await page.evaluate(() => {
+    const placed = [
+      ['teich', 7, 7], ['zaun', 9, 7], ['beet', 7, 9], ['blumenbeet', 9, 9],
+      ['bank', 10, 8], ['leuchtturm', 6, 8], ['kirschbaum', 8, 6],
+      ['apfelbaum', 8, 10], ['brunnen', 10, 10], ['laterne', 6, 10],
+    ].map(([d, x, y]) => ({ d, i: 'mathe', x, y }));
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+      v: 1, stars: 120, candy: 300, seen: [], placed, strength: {}, sound: true, voice: false,
+    }));
+  });
+  await page.reload();
+  await page.waitForTimeout(900);
+  await page.locator('.island-card').first().tap();
+  // Long enough for a bird to be up and the critters to have moved off
+  // their starting waypoints.
+  await page.waitForTimeout(4200);
+  await shot('leben');
+  // Again with the plaques hidden, so it is possible to tell whether a
+  // decoration is missing or merely covered.
+  await page.evaluate(() => {
+    const l = document.querySelector('.labels');
+    if (l) l.style.display = 'none';
+  });
+  await page.waitForTimeout(300);
+  await shot('leben-nackt');
+}
+
 await browser.close();
 server.close();
 console.log('done');
