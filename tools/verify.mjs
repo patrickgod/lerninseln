@@ -109,6 +109,28 @@ for (const stem of [...sayKeys, ...wordStems]) {
 check(`every spoken line ships as audio (${sayKeys.length + wordStems.length} checked)`,
   missingVoice.length === 0, missingVoice.slice(0, 5).join(', '));
 
+// ------------------------------------------------------ the word pictures
+//
+// The Anlaute house draws only from words that have a drawing. A typo in
+// either table would silently shrink that pool rather than break
+// anything — the house would still work, it would just quietly stop
+// asking about half the alphabet, and nobody would notice for months.
+
+const art = await readFile('src/games/wortbilder.ts', 'utf8');
+const bilder = [...art.matchAll(/^\s{2}([A-ZÄÖÜ][a-zäöüß]+):\s*\w+,$/gm)].map((m) => m[1]);
+const known = new Set([...wordList.matchAll(/\{\s*wort:\s*'([^']+)'/g)].map((m) => m[1]));
+const orphans = bilder.filter((w) => !known.has(w));
+check(`every word picture matches a word (${bilder.length} pictures)`,
+  bilder.length >= 12 && orphans.length === 0,
+  orphans.length ? `not in woerter.ts: ${orphans.join(', ')}`
+    : bilder.length < 12 ? `only ${bilder.length}` : '');
+
+// The whole point of the house is the FIRST SOUND, so twelve pictures
+// that all start with B would teach nothing.
+const initials = new Set(bilder.map((w) => w[0]));
+check('the pictures spread across the alphabet', initials.size >= 10,
+  `${initials.size} distinct initials: ${[...initials].sort().join('')}`);
+
 // -------------------------------------------------------- the picker
 
 await page.goto(BASE);

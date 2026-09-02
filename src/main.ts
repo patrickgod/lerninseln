@@ -21,6 +21,7 @@ import * as S from './islands/sprites.js';
 import { buildRound } from './games/games.js';
 import type { Question, Prompt } from './games/types.js';
 import { WOERTER, stem } from './games/woerter.js';
+import { bildCanvas, hasBild } from './games/wortbilder.js';
 
 const QUESTIONS_PER_ROUND = 10;
 
@@ -502,6 +503,15 @@ function promptView(p: Prompt, q: Question): HTMLElement {
       break;
     }
     case 'wort': {
+      // The picture and the spoken word are two channels for the same
+      // thing, and both are here on purpose: the sound can be off, and
+      // a child who is not sure what the drawing is can tap to hear it.
+      const bild = hasBild(p.wort) ? bildCanvas(p.wort, bildScale()) : null;
+      if (bild) {
+        const holder = el('div', 'bild');
+        holder.appendChild(bild);
+        box.appendChild(holder);
+      }
       const speak = el('button', 'speak', '▶');
       tap(speak, () => audio.say(`wort-${stem(p.wort)}`, p.wort));
       box.appendChild(speak);
@@ -512,6 +522,11 @@ function promptView(p: Prompt, q: Question): HTMLElement {
     }
   }
   return box;
+}
+
+/** The word picture is 40px at 1x, and wants about a fifth of the screen. */
+function bildScale(): number {
+  return Math.max(2, Math.min(8, Math.floor((window.innerHeight * 0.34) / 40)));
 }
 
 function frameScale(): number {

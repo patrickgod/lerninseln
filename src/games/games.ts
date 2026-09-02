@@ -18,6 +18,7 @@
 import type { Game, Question, Prompt } from './types.js';
 import { strengthOf } from '../core/state.js';
 import { WOERTER } from './woerter.js';
+import { hasBild } from './wortbilder.js';
 
 /** Deterministic-enough randomness. Rounds should not be reproducible. */
 function pickOne<T>(arr: T[]): T {
@@ -182,7 +183,12 @@ export const zwillinge: Game = {
 
 export const anlaute: Game = {
   id: 'anlaute',
-  facts: () => WOERTER.map((w) => `an:${w.wort}`),
+  // Only words that have a picture. The question is "which letter does
+  // this word START with", and without a picture the only way to know
+  // WHICH word is to hear it — which makes the whole house stop working
+  // the moment a parent turns the sound off in a waiting room. A house
+  // that breaks when you use a switch the app itself offers is broken.
+  facts: () => WOERTER.filter((w) => hasBild(w.wort)).map((w) => `an:${w.wort}`),
   next(pick) {
     const fact = pick(this.facts());
     const w = WOERTER.find((x) => `an:${x.wort}` === fact) ?? WOERTER[0];

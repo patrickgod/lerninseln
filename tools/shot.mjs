@@ -104,6 +104,23 @@ await page.locator('button', { hasText: 'Bauen' }).first().tap();
 await page.waitForTimeout(500);
 if (want('shop')) await shot('shop');
 
+// The language island, and the Anlaute house — the one that must work
+// with the sound switched off, so the picture is the thing to look at.
+// Clear the tester's 120 stars first, or BOTH language houses are
+// unlocked and the tap at the centre of the island lands on whichever
+// one happens to be in front.
+await page.goto(`http://localhost:${PORT}/`);
+await page.evaluate(() => localStorage.clear());
+await page.reload();
+await page.waitForTimeout(900);
+await page.locator('.island-card').nth(1).tap();
+await page.waitForTimeout(900);
+if (want('sprache')) await shot('sprache');
+const box2 = await page.locator('#stage').boundingBox();
+await page.touchscreen.tap(box2.x + box2.width / 2, box2.y + box2.height / 2 + 10);
+await page.waitForTimeout(1200);
+if (want('anlaute')) await shot('anlaute');
+
 await browser.close();
 server.close();
 console.log('done');

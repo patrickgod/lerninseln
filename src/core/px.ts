@@ -33,6 +33,21 @@ export class Px {
     this.data[i] = r; this.data[i + 1] = g; this.data[i + 2] = b; this.data[i + 3] = 255;
   }
 
+  /**
+   * Rub a pixel out.
+   *
+   * Needed because some shapes are easier to describe as a
+   * subtraction than as a drawing — a crescent moon is one disc minus
+   * another, and cutting it that way gives a true arc where drawing it
+   * by hand gives a banana.
+   */
+  clear(x: number, y: number): void {
+    x |= 0; y |= 0;
+    if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
+    const i = (y * this.w + x) * 4;
+    this.data[i] = 0; this.data[i + 1] = 0; this.data[i + 2] = 0; this.data[i + 3] = 0;
+  }
+
   /** Alpha-composite a colour — only for soft shadows, never for edges. */
   blend(x: number, y: number, hex: string, a: number): void {
     x |= 0; y |= 0;
