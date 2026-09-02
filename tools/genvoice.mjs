@@ -110,10 +110,20 @@ function spokenLines() {
 function words() {
   const src = readFileSync('src/games/woerter.ts', 'utf8');
   const out = {};
+  const found = [];
   const re = /\{\s*wort:\s*'([^']+)'/g;
   let m;
-  while ((m = re.exec(src))) {
-    const w = m[1];
+  while ((m = re.exec(src))) found.push(m[1]);
+
+  // The rhyme partners as well. They live in their own list because the
+  // Anlaute and Silben houses must not draw from them, but they still
+  // have to be spoken.
+  const rw = src.match(/REIMWOERTER: string\[\] = \[([^\]]*)\]/);
+  if (rw) {
+    for (const q of rw[1].matchAll(/'([^']+)'/g)) found.push(q[1]);
+  }
+
+  for (const w of found) {
     const stem = 'wort-' + w.toLowerCase()
       .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss');
     // A single word in isolation gets read like a list item and comes

@@ -69,6 +69,61 @@ export const WOERTER: Wort[] = [
   { wort: 'Zitrone', silben: 3 },
 ];
 
+/**
+ * Rhyme families, for the Haus der Reime.
+ *
+ * Grouped by the SOUND of the ending, not by the spelling, which is the
+ * whole exercise — a first-grader hears that Haus and Maus belong
+ * together long before they can see why.
+ *
+ * Getting this table right turned out to matter more than it looks. The
+ * first draft had `Ente / Tante / Kante`, which do not rhyme at all —
+ * they share a consonant cluster and a different stressed vowel — and
+ * `Mond / wohnt / Ton`, where the third has no final t. A rhyme game
+ * that accepts a near-miss teaches the child that near-misses count,
+ * which is worse than not having the game.
+ *
+ * Every word is either in WOERTER or in REIMWOERTER below, so every one
+ * of them has a recording.
+ */
+export const REIME: string[][] = [
+  ['Haus', 'Maus'],
+  ['Tisch', 'Fisch'],
+  ['Nase', 'Vase', 'Hase'],
+  ['Rose', 'Dose', 'Hose'],
+  ['Sonne', 'Tonne'],
+  ['Katze', 'Tatze', 'Glatze'],
+  ['Baum', 'Traum', 'Schaum'],
+  ['Nest', 'Fest'],
+  ['Ball', 'Stall'],
+  ['Uhr', 'Spur'],
+  ['Rad', 'Bad', 'Pfad'],
+  ['Hund', 'Mund'],
+];
+
+/**
+ * The rhyme partners that are not in WOERTER.
+ *
+ * Kept separate on purpose. WOERTER is the list the Anlaute and Silben
+ * houses draw from, and those want clean, common, picture-able nouns
+ * with an unambiguous first sound; a rhyme partner only has to sound
+ * right at the END. Mixing them would have quietly given the Anlaute
+ * house words like `Pfad`, whose first sound is exactly the kind a
+ * first-grader is not being asked about yet.
+ *
+ * `tools/genvoice.mjs` records both lists.
+ */
+export const REIMWOERTER: string[] = [
+  'Vase', 'Hase', 'Hose', 'Tonne', 'Tatze', 'Glatze',
+  'Traum', 'Schaum', 'Fest', 'Stall', 'Spur', 'Bad', 'Pfad', 'Mund',
+];
+
+/** Does this word rhyme with that one? */
+export function reimtSich(a: string, b: string): boolean {
+  if (a === b) return false;
+  return REIME.some((g) => g.includes(a) && g.includes(b));
+}
+
 /** The audio file stem for a word. */
 export function stem(wort: string): string {
   return wort

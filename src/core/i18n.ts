@@ -53,6 +53,8 @@ const DE = {
   'house.zwillinge': 'Das Haus der Zwillinge',
   'house.anlaute': 'Das Haus der ersten Laute',
   'house.silben': 'Das Haus der Silben',
+  'house.woerter': 'Das Haus der ersten Wörter',
+  'house.reime': 'Das Haus der Reime',
 
   // One line per house, for the grown-up sitting next to the child.
   // Deliberately says what is PRACTISED, not what the game does — a
@@ -64,6 +66,8 @@ const DE = {
   'house.zwillinge.sub': 'Verdoppeln bis 20',
   'house.anlaute.sub': 'Anlaute hören — mit welchem Buchstaben fängt es an?',
   'house.silben.sub': 'Silben klatschen',
+  'house.woerter.sub': 'Erstes Lesen — Bild und Wort zusammenbringen',
+  'house.reime.sub': 'Reime hören — Haus und Maus',
 
   // ------------------------------------------------------ the rounds
   'round.progress': 'Aufgabe {n} von {total}',
@@ -116,6 +120,14 @@ const DE = {
   'say.silbenErst':
     'Willkommen im Haus der Silben! Klatsche das Wort mit, so wie in der Schule. Wie viele Silben hat es?',
   'say.silben': 'Die Silben! Wie oft klatschst du?',
+
+  'say.woerterErst':
+    'Willkommen im Haus der ersten Wörter! Du siehst ein Bild. Welches Wort gehört dazu? Lies in Ruhe und tippe darauf.',
+  'say.woerter': 'Die ersten Wörter! Welches Wort passt zum Bild?',
+
+  'say.reimeErst':
+    'Willkommen im Haus der Reime! Zwei Wörter reimen sich, wenn sie hinten gleich klingen. Haus und Maus zum Beispiel. Welches Wort reimt sich?',
+  'say.reime': 'Die Reime! Welches Wort klingt hinten gleich?',
 
   'say.wellDone1': 'Das hast du toll gemacht.',
   'say.wellDone2': 'Super! Ich freue mich.',

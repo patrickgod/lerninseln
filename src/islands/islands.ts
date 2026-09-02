@@ -147,6 +147,26 @@ export const HOUSES: HouseDef[] = [
     roof: 'thatch',
     game: 'silben',
   },
+  {
+    id: 'woerter',
+    island: 'sprache',
+    nameKey: 'house.woerter',
+    sayKey: 'say.woerter',
+    stars: 45,
+    x: 5, y: 9,
+    roof: 'terracotta',
+    game: 'woerter',
+  },
+  {
+    id: 'reime',
+    island: 'sprache',
+    nameKey: 'house.reime',
+    sayKey: 'say.reime',
+    stars: 85,
+    x: 11, y: 6,
+    roof: 'slate',
+    game: 'reime',
+  },
 ];
 
 export function island(id: string): IslandDef {

@@ -624,3 +624,13 @@ button:disabled { opacity: 0.45; }
 .setting button.off { background: var(--plaster-dim); opacity: 0.75; }
 
 button.danger { background: var(--fruit); color: var(--plaster); }
+
+/* Word answers: wider, shorter, and a face small enough for a long
+   German compound. Still well over 64x64, which is the floor. */
+.answers.words button {
+  width: auto;
+  min-width: clamp(150px, 22vw, 260px);
+  height: clamp(92px, 13vh, 124px);
+  font-size: clamp(28px, 4.4vh, 46px);
+  padding: 0 22px;
+}

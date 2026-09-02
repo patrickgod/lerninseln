@@ -17,7 +17,7 @@
 
 import type { Game, Question, Prompt } from './types.js';
 import { strengthOf } from '../core/state.js';
-import { WOERTER } from './woerter.js';
+import { WOERTER, REIME } from './woerter.js';
 import { hasBild } from './wortbilder.js';
 
 /** Deterministic-enough randomness. Rounds should not be reproducible. */
@@ -239,6 +239,80 @@ export const silben: Game = {
   },
 };
 
+// ------------------------------------------------- Haus der ersten Wörter
+
+/**
+ * A picture, and three written words. Tap the one that says it.
+ *
+ * The first real reading exercise in the box, and the point where the
+ * language island stops being about sounds and starts being about
+ * print. Deliberately the other way round from Anlaute: there the word
+ * is heard and a letter is chosen, here the word is SEEN and matched to
+ * a thing — which is what reading actually is.
+ *
+ * The distractors are chosen to share a first letter or a length with
+ * the answer wherever possible, because a child who can rule out two
+ * words by their shape alone has not read anything.
+ */
+export const woerterLesen: Game = {
+  id: 'woerter',
+  facts: () => WOERTER.filter((w) => hasBild(w.wort)).map((w) => `wl:${w.wort}`),
+  next(pick) {
+    const fact = pick(this.facts());
+    const wort = fact.slice(3);
+    const pool = WOERTER.map((w) => w.wort).filter((w) => w !== wort);
+    // Same initial first, then similar length, then anything.
+    const near = pool.filter((w) => w[0] === wort[0]);
+    const sized = pool.filter((w) => Math.abs(w.length - wort.length) <= 1 && w[0] !== wort[0]);
+    const wrong: string[] = [];
+    for (const list of [near, sized, pool]) {
+      for (const w of shuffle(list)) {
+        if (wrong.length >= 2) break;
+        if (!wrong.includes(w)) wrong.push(w);
+      }
+    }
+    return {
+      fact,
+      prompt: { kind: 'wort', wort, audio: wort.toLowerCase(), zeige: false },
+      choices: shuffle([wort, ...wrong]),
+      correct: -1,
+      showOnMiss: { kind: 'wort', wort, audio: wort.toLowerCase(), zeige: true },
+    } as Question;
+  },
+};
+
+// ------------------------------------------------------- Haus der Reime
+
+/**
+ * Which of these rhymes with the word you just heard?
+ *
+ * Rhyme awareness is one of the strongest predictors of how easily a
+ * child learns to read, and it is a listening skill rather than a
+ * reading one — so the word is spoken and the answers are spoken too
+ * when tapped.
+ */
+export const reime: Game = {
+  id: 'reime',
+  facts: () => REIME.map((g) => `re:${g[0]}`),
+  next(pick) {
+    const fact = pick(this.facts());
+    const group = REIME.find((g) => g[0] === fact.slice(3)) ?? REIME[0];
+    const wort = group[0];
+    const partner = group[1 + Math.floor(Math.random() * (group.length - 1))];
+    // Distractors come from OTHER families, so nothing else in the row
+    // rhymes and there is exactly one right answer.
+    const others = REIME.filter((g) => g !== group).flat();
+    const wrong = shuffle(others).slice(0, 2);
+    return {
+      fact,
+      prompt: { kind: 'wort', wort, audio: wort.toLowerCase(), zeige: true },
+      choices: shuffle([partner, ...wrong]),
+      correct: -1,
+      showOnMiss: { kind: 'wort', wort, audio: wort.toLowerCase(), zeige: true },
+    } as Question;
+  },
+};
+
 // ---------------------------------------------------------------- glue
 
 /**
@@ -273,6 +347,15 @@ function expectedAnswer(gameId: string, q: Question): string {
       const w = WOERTER.find((x) => x.wort === q.fact.slice(3));
       return String(w ? w.silben : 2);
     }
+    case 'woerter':
+      return q.fact.slice(3);
+    case 'reime': {
+      // The generator picked one partner out of the family; the answer
+      // is whichever card is in the same family as the prompt word.
+      const group = REIME.find((g) => g[0] === q.fact.slice(3));
+      if (!group) return q.choices[0];
+      return q.choices.find((c) => group.includes(c)) ?? q.choices[0];
+    }
     default:
       return q.choices[0];
   }
@@ -285,6 +368,8 @@ export const GAMES: Record<string, Game> = {
   'zwillinge': zwillinge,
   'anlaute': anlaute,
   'silben': silben,
+  'woerter': woerterLesen,
+  'reime': reime,
 };
 
 /** Build a whole round: ten questions, no fact twice in a row. */

@@ -77,6 +77,35 @@ function sayOneOf(keys: string[]): void {
   sayLine(keys[Math.floor(Math.random() * keys.length)]);
 }
 
+/** Timers for a spoken sequence, so a new question can cancel the old. */
+let speaking: number[] = [];
+
+function stopSequence(): void {
+  for (const id of speaking) clearTimeout(id);
+  speaking = [];
+}
+
+/**
+ * Say several words in turn, with a gap between them.
+ *
+ * The Haus der Reime needs this and it is not a nicety: the question is
+ * spoken but the three answers are WRITTEN, and a first-grader who
+ * cannot read yet has been handed a task they cannot even perceive. A
+ * teacher setting this exercise says all four words out loud, so the
+ * app does too.
+ *
+ * Each line is roughly a second; the exact figure does not matter
+ * because `say` cancels whatever was playing, so a gap that is slightly
+ * too short only clips a tail.
+ */
+function saySequence(words: string[], firstDelay = 300, gap = 1100): void {
+  stopSequence();
+  words.forEach((w, i) => {
+    speaking.push(window.setTimeout(
+      () => audio.say(`wort-${stem(w)}`, w), firstDelay + i * gap));
+  });
+}
+
 /**
  * The greeting for a house: the full explanation the first time it is
  * ever opened, the short version afterwards.
@@ -628,6 +657,7 @@ function startRound(house: HouseDef): void {
 
 function drawQuestion(): void {
   if (!round) return;
+  stopSequence();
   clear();
   const q = round.qs[round.i];
   const wrap = el('div', 'round');
@@ -654,7 +684,11 @@ function drawQuestion(): void {
   stageQ.appendChild(promptView(q.prompt, q));
   wrap.appendChild(stageQ);
 
-  const answers = el('div', 'answers');
+  // The answer cards are sized for a single digit or letter. A whole
+  // word needs a wider card and a much smaller face, or "Pflaumenbaum"
+  // runs off both ends of it.
+  const wordy = q.choices.some((c) => c.length > 2);
+  const answers = el('div', `answers${wordy ? ' words' : ''}`);
   q.choices.forEach((label, idx) => {
     const b = el('button', undefined, label);
     tap(b, () => onAnswer(idx, b, stageQ, answers));
@@ -728,12 +762,17 @@ function promptView(p: Prompt, q: Question): HTMLElement {
         holder.appendChild(bild);
         box.appendChild(holder);
       }
+      // In the rhyme house the answers are read out too, because they
+      // are written and the child is not yet.
+      const alsoRead = round !== null && round.house.game === 'reime';
+      const line = alsoRead ? [p.wort, ...q.choices] : [p.wort];
+
       const speak = el('button', 'speak', '▶');
-      tap(speak, () => audio.say(`wort-${stem(p.wort)}`, p.wort));
+      tap(speak, () => saySequence(line, 0));
       box.appendChild(speak);
       if (p.zeige) box.appendChild(el('div', 'wort', p.wort));
-      // Say it once on arrival: the word IS the question.
-      setTimeout(() => audio.say(`wort-${stem(p.wort)}`, p.wort), 260);
+      // Say it on arrival: the word IS the question.
+      saySequence(line);
       break;
     }
   }

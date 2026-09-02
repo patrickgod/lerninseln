@@ -189,6 +189,40 @@ if (want('leben')) {
   }
 }
 
+// The two newest houses on the language island: reading a word off a
+// picture, and hearing a rhyme.
+if (want('lesen')) {
+  for (const [name, tile] of [['lesen', [5, 9]], ['reime', [11, 6]]]) {
+    await page.goto(`http://localhost:${PORT}/`);
+    await page.evaluate(() => {
+      localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+        v: 1, stars: 200, candy: 0, seen: [], placed: [], strength: {},
+        sound: true, voice: false,
+      }));
+    });
+    await page.reload();
+    await page.waitForTimeout(900);
+    await page.locator('.island-card').nth(1).tap();
+    await page.waitForTimeout(1200);
+    // Aim at the house by its tile, using the app's own projection.
+    const at = await page.evaluate(([tx, ty]) => {
+      const c = document.getElementById('stage');
+      const r = c.getBoundingClientRect();
+      return { x: r.left, y: r.top, w: r.width, h: r.height, tx, ty };
+    }, tile);
+    // The houses are laid out around the centre; tap by hunting the
+    // label, which is positioned over the house itself.
+    const label = page.locator('.house-label').filter({ hasText: name === 'lesen' ? 'Wörter' : 'Reime' });
+    const box3 = await label.first().boundingBox();
+    if (box3) {
+      await page.touchscreen.tap(box3.x + box3.width / 2, box3.y - 30);
+      await page.waitForTimeout(1400);
+      await shot(name);
+    }
+    void at;
+  }
+}
+
 // The Zahlenfreunde: pairs of numbers that make ten, known both ways,
 // wandering by the house they came out of.
 if (want('freunde')) {
