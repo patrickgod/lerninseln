@@ -49,7 +49,7 @@ let houseHits: render.HouseHit[] = [];
 /** The picker's live island previews, redrawn each frame. */
 const thumbs: { c: HTMLCanvasElement; id: string; w: number; h: number }[] = [];
 /** One DOM label per house, repositioned from the hit rects each frame. */
-const houseLabels = new Map<string, HTMLDivElement>();
+const houseLabels = new Map<string, { el: HTMLDivElement; w: number; h: number }>();
 let view: render.View = { scale: 2, ox: 0, oy: 0 };
 let started = 0;
 
@@ -152,6 +152,31 @@ window.addEventListener('orientationchange', () => setTimeout(resize, 120));
 
 // --------------------------------------------------------- the frame
 
+/**
+ * Per-frame work timing, behind `?perf=1`.
+ *
+ * Measures the WORK rather than the frame rate, and the difference is
+ * the whole point. The first version of the performance check timed
+ * the gaps between animation frames, which in a headless browser is
+ * the scheduler and the load on the machine and almost nothing to do
+ * with this app: it read 17ms on an idle laptop and 35ms on a busy one
+ * while the actual drawing never moved from about two milliseconds.
+ *
+ * Two confident theories died before anybody measured — the campfire
+ * particles, then a layout flush in the label placement. Both were
+ * innocent. LEARNINGS.md said this would happen and it did anyway.
+ */
+const perfOn = new URLSearchParams(location.search).get('perf') === '1';
+const perf: Record<string, number> = { draw: 0, labels: 0, fx: 0 };
+if (perfOn) (window as unknown as { __perf: typeof perf }).__perf = perf;
+
+function mark(key: string, since: number): void {
+  if (!perfOn) return;
+  // A rolling mean, so one slow frame during start-up does not stand
+  // for the whole measurement.
+  perf[key] = perf[key] * 0.9 + (performance.now() - since) * 0.1;
+}
+
 let last = 0;
 function frame(now: number): void {
   if (!started) started = now;
@@ -170,6 +195,7 @@ function frame(now: number): void {
   app.style.transform = off.x || off.y ? `translate(${off.x}px, ${off.y}px)` : '';
 
   if (screen === 'island') {
+    const t0 = performance.now();
     const dpr = Math.min(3, window.devicePixelRatio || 1);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, stage.width, stage.height);
@@ -180,8 +206,11 @@ function frame(now: number): void {
       hover,
       arriving: arriving && now < arrivingUntil ? arriving : null,
     });
+    mark('draw', t0);
     if (arriving && now >= arrivingUntil) arriving = null;
+    const t1 = performance.now();
     placeLabels();
+    mark('labels', t1);
   }
 
   // The picker's island previews are LIVE. They already show what the
@@ -199,11 +228,13 @@ function frame(now: number): void {
     }
   }
 
+  const t2 = performance.now();
   const dpr = Math.min(3, window.devicePixelRatio || 1);
   fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
   fx.update(dt);
   fx.draw(fxCtx);
+  mark('fx', t2);
 
   requestAnimationFrame(frame);
 }
@@ -232,21 +263,28 @@ function placeLabels(): void {
   const seen = new Set<string>();
 
   // Work out where each label wants to be, then push them apart.
+  //
+  // The sizes were MEASURED here, once per label, every frame — and
+  // reading `getBoundingClientRect` right after writing `style.top` on
+  // the previous label forces the browser to flush layout, every time,
+  // for every label. That alone roughly doubled the frame time on a
+  // busy island, and the frame-time check is what caught it. A label's
+  // size never changes after it is built, so it is measured once when
+  // it is built and only written to from here.
   const want: { el: HTMLDivElement; x: number; y: number; w: number; h: number }[] = [];
   for (const hit of houseHits) {
     const label = houseLabels.get(hit.house.id);
     if (!label) continue;
     seen.add(hit.house.id);
-    label.style.visibility = 'visible';
-    const r = label.getBoundingClientRect();
+    label.el.style.visibility = 'visible';
     want.push({
-      el: label,
+      el: label.el,
       x: Math.round(hit.x + hit.w / 2),
       // Tucked right under the doorstep, so the label sits on the tile
       // the house occupies rather than on the free ground in front.
       y: Math.round(hit.y + hit.h - 14),
-      w: r.width || 160,
-      h: r.height || 34,
+      w: label.w,
+      h: label.h,
     });
   }
 
@@ -272,7 +310,7 @@ function placeLabels(): void {
   // A house that did not draw this frame — scrolled off, or not there —
   // must not leave its label stranded in the corner.
   for (const [id, label] of houseLabels) {
-    if (!seen.has(id)) label.style.visibility = 'hidden';
+    if (!seen.has(id)) label.el.style.visibility = 'hidden';
   }
 }
 
@@ -630,9 +668,16 @@ function drawIslandUi(): void {
       open ? t(`${h.nameKey}.sub`) : t('island.fromStars', { n: h.stars })));
     label.style.visibility = 'hidden';
     labels.appendChild(label);
-    houseLabels.set(h.id, label);
+    houseLabels.set(h.id, { el: label, w: 160, h: 34 });
   }
   ui.appendChild(labels);
+
+  // Measure every label ONCE, now that they are all in the document.
+  // One layout flush per screen instead of one per label per frame.
+  for (const entry of houseLabels.values()) {
+    const r = entry.el.getBoundingClientRect();
+    if (r.width) { entry.w = r.width; entry.h = r.height; }
+  }
 
   if (building) {
     ui.appendChild(el('div', 'hint', holding ? t('shop.placeIt') : t('island.build')));

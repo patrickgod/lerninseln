@@ -108,6 +108,30 @@ day that check went in it immediately caught a string added to the
 table with no recording — and then a regex in the generator that did
 not allow digits, so `wellDone1..3` were being silently skipped.
 
+**Measure the work, not the wall clock.** The frame-time check timed
+the gaps between animation frames. In a headless browser that is the
+scheduler and the load on the machine and almost nothing to do with the
+app: it read 17ms on an idle laptop and 35ms on a busy one while the
+actual drawing never moved from about two milliseconds. It then went
+red on a build whose renderer had not changed at all.
+
+**And then two confident theories died before anybody measured.** The
+new campfire particles: innocent, 2ms. A layout flush in the label
+placement — `getBoundingClientRect` read once per label per frame,
+which really is a bad idea and really was there: also innocent, 0.04ms.
+Tidegarden's rule held exactly: *four confident theories about a
+performance bug died in a row; the fifth measurement was right and none
+of the theories were.* Two here. The instrumentation took five minutes
+and would have taken five minutes at the start.
+
+**A performance check is only as good as the regression it can see.**
+The rewritten one measures work per frame and reads a stable 1.3ms. Run
+against a deliberately quadratic loop over the placed decorations it
+reads 1.8ms — it would NOT have caught that. Run with the sprite cache
+disabled it reads 103ms. So it covers the catastrophic mistake and not
+the subtle one, and the comment in the file says so rather than letting
+a future reader assume it covers both.
+
 **Verify the promise, not the intention.** "Nothing leaves the device"
 was a comment in AGENTS.md for a week. It is now a check that watches
 every request and compares its origin, and it will go red the day

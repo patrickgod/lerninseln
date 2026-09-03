@@ -347,22 +347,30 @@ await page.evaluate(() => {
   localStorage.setItem('lerninseln.save.v1', JSON.stringify({ ...raw, sound: true }));
 });
 
-// --------------------------------------------------------- frame time
+// --------------------------------------------------------- frame work
 //
-// IPAD.md sets the budget at 60fps on an iPad from about 2019. This is
-// NOT that measurement and must not be mistaken for it: headless
-// Chromium rasterises in software, and Tidegarden already learned the
-// hard way that the biggest performance bug in a pixel-art renderer can
-// be completely invisible to a software rasteriser.
+// This measures the WORK the app does per frame, not the frame rate,
+// and the difference is the whole reason it is written this way.
 //
-// What this DOES catch is the mistake that would ruin the frame on any
-// machine — an accidental quadratic in the per-tile loops as the island
-// fills up with decorations. So: fill one, run it, and fail if a frame
-// takes longer than a thirtieth of a second.
+// The first version timed the gaps between animation frames. In a
+// headless browser that is the scheduler and the load on the machine
+// and almost nothing to do with this app: it read 17ms on an idle
+// laptop and 35ms on a busy one while the actual drawing never moved
+// from about two milliseconds. It then went red on a build whose
+// renderer had not changed, and two confident theories about the cause
+// — the new campfire particles, then a layout flush in the label
+// placement — were both wrong, which is exactly the trap LEARNINGS.md
+// describes and which happened anyway.
+//
+// It is still NOT the iPad measurement from IPAD.md: headless Chromium
+// rasterises in software. What it is, is a stable number that goes up
+// the moment somebody writes an accidental quadratic into the per-tile
+// loops, which is the mistake that would ruin the frame on any machine.
 
-await page.goto(BASE);
+await page.goto(`${BASE}?perf=1`);
 await page.evaluate(() => {
-  // A heavily built island: forty things, every kind of ambient life.
+  // A heavily built island: forty things, every kind of ambient life,
+  // and every Zahlenfreund-pair already learned.
   const placed = [];
   const kinds = ['kirschbaum', 'apfelbaum', 'teich', 'zaun', 'beet', 'blumenbeet',
     'bank', 'laterne', 'huhn', 'hecke', 'sonnenblumen', 'bienenstock',
@@ -384,25 +392,23 @@ await page.evaluate(() => {
 await page.reload();
 await page.waitForTimeout(700);
 await page.locator('.island-card').first().tap();
-await page.waitForTimeout(1200);
+// Long enough for the rolling mean to settle.
+await page.waitForTimeout(3500);
 
-const frames = await page.evaluate(() => new Promise((resolve) => {
-  const times = [];
-  let last = performance.now();
-  let n = 0;
-  const tick = () => {
-    const now = performance.now();
-    times.push(now - last);
-    last = now;
-    if (++n < 140) requestAnimationFrame(tick);
-    else resolve(times.slice(20).sort((a, b) => a - b));
-  };
-  requestAnimationFrame(tick);
-}));
-const median = frames[Math.floor(frames.length / 2)];
-const worst = frames[frames.length - 1];
-check('a busy island still draws a frame in under 33ms',
-  median < 33, `median ${median.toFixed(1)}ms, worst ${worst.toFixed(1)}ms`);
+const work = await page.evaluate(() => window.__perf);
+const total = work ? work.draw + work.labels + work.fx : 999;
+// Five, against a real figure of about 1.3. Tight enough that a
+// fourfold regression trips it, loose enough that a slow morning does
+// not. Verified the way AGENTS.md rule 3 asks: with the sprite cache
+// disabled — the single most likely catastrophic regression in this
+// renderer, and the one LEARNINGS.md warns about by name — it reads
+// 103ms and fails. A merely quadratic loop over the placed decorations
+// only costs half a millisecond and would NOT trip it, which is worth
+// knowing about what this check does and does not cover.
+check('a busy island costs under 5ms of work per frame',
+  total < 5,
+  `draw ${work.draw.toFixed(2)}ms + labels ${work.labels.toFixed(2)}ms `
+  + `+ fx ${work.fx.toFixed(2)}ms = ${total.toFixed(2)}ms`);
 
 // ------------------------------------------------------------ offline
 //
