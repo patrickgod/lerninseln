@@ -11,6 +11,7 @@ import { t } from './core/i18n.js';
 import * as state from './core/state.js';
 import * as audio from './core/audio.js';
 import * as fx from './core/fx.js';
+import { iconCanvas } from './core/icons.js';
 import { tenFrameCanvas } from './core/tenframe.js';
 import {
   ISLANDS, GRID, island, unlockedHouses, housesOn, buildable,
@@ -327,10 +328,10 @@ function purse(): HTMLDivElement {
   const s = state.get();
   const wrap = el('div', 'purse');
   const star = el('div', 'coin star');
-  star.appendChild(el('i'));
+  star.appendChild(iconCanvas('stern', 34));
   star.appendChild(el('span', undefined, String(s.stars)));
   const candy = el('div', 'coin candy');
-  candy.appendChild(el('i'));
+  candy.appendChild(iconCanvas('bonbon', 34));
   candy.appendChild(el('span', undefined, String(s.candy)));
   wrap.append(star, candy);
   return wrap;
@@ -733,7 +734,7 @@ function showShop(): void {
     item.appendChild(decoThumb(d.art));
     item.appendChild(el('div', 'label', t(d.nameKey)));
     const price = el('div', 'price');
-    price.appendChild(el('i'));
+    price.appendChild(iconCanvas('bonbon', 22));
     price.appendChild(el('span', undefined, String(d.price)));
     item.appendChild(price);
     if (state.get().candy < d.price) item.disabled = true;
@@ -779,7 +780,7 @@ function spriteFor(art: string): S.Sprite {
     case 'mushrooms': return D.mushrooms(9);
     case 'beehive': return D.beehive();
     case 'birdbox': return D.birdBox();
-    case 'campfire': return D.campfire(0);
+    case 'campfire': return D.campfire();
     case 'windmill': return D.windmill(2);
     case 'cherry': return S.cherryTree(7);
     case 'apple': return S.appleTree(11);
@@ -1124,18 +1125,18 @@ function finishRound(): void {
   const purseRow = el('div', 'purse big');
   const starCoin = el('div', 'coin star');
   const starNum = el('span', undefined, String(before));
-  starCoin.append(el('i'), starNum);
+  starCoin.append(iconCanvas('stern', 40), starNum);
   const candyCoin = el('div', 'coin candy');
   const candyNum = el('span', undefined, String(state.get().candy - candy));
-  candyCoin.append(el('i'), candyNum);
+  candyCoin.append(iconCanvas('bonbon', 40), candyNum);
   purseRow.append(starCoin, candyCoin);
   sheet.appendChild(purseRow);
 
   const reward = el('div', 'reward');
   const s1 = el('div', 'coin star');
-  s1.append(el('i'), el('span', undefined, `+${stars}`));
+  s1.append(iconCanvas('stern', 34), el('span', undefined, `+${stars}`));
   const s2 = el('div', 'coin candy');
-  s2.append(el('i'), el('span', undefined, `+${candy}`));
+  s2.append(iconCanvas('bonbon', 34), el('span', undefined, `+${candy}`));
   reward.append(s1, s2);
   sheet.appendChild(reward);
 

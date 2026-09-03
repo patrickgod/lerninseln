@@ -243,10 +243,15 @@ export function birdBox(): Sprite {
  * reason for having a day and a night at all: something the child owns
  * that behaves differently depending on when they play.
  */
-export function campfire(frame: number): Sprite {
-  const p = new Px(26, 30);
+export function campfire(): Sprite {
+  const p = new Px(26, 26);
   const baseY = p.h - 1 - TILE_H / 2;
   const cx = 13;
+
+  // Just the hearth. The FIRE is drawn by the renderer as particles,
+  // because a flame made of two alternating frames does not flicker —
+  // it wobbles, and a wobbling triangle reads as a mistake rather than
+  // as a fire.
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * Math.PI * 2;
     p.ellipse(cx + Math.round(Math.cos(a) * 9), baseY + Math.round(Math.sin(a) * 4),
@@ -254,15 +259,12 @@ export function campfire(frame: number): Sprite {
   }
   p.line(cx - 5, baseY - 2, cx + 5, baseY - 4, shade(P.timber, 2));
   p.line(cx - 5, baseY - 4, cx + 5, baseY - 2, shade(P.timber, 1));
-  const lean = frame === 0 ? 0 : 1;
-  for (let j = 0; j < 11; j++) {
-    const w = Math.round(4 * Math.sin((1 - j / 11) * Math.PI * 0.8));
-    for (let i = -w; i <= w; i++) {
-      const hot = j > 6 || Math.abs(i) < w * 0.4;
-      p.set(cx + i + Math.round((j / 11) * lean * 2), baseY - 4 - j,
-        shade(hot ? P.glow : P.citrus, hot ? 4 : 2));
-    }
-  }
+  // embers between the logs, so the hearth is alive even in daylight
+  // when the flame is hardest to see
+  p.set(cx - 1, baseY - 3, shade(P.glow, 2));
+  p.set(cx + 1, baseY - 3, shade(P.citrus, 2));
+  p.set(cx, baseY - 4, shade(P.glow, 3));
+
   finish(p);
   contact(p, cx, baseY + 1, 22, 11);
   return { px: p, ...anchor(p) };

@@ -304,6 +304,34 @@ if (want('entdecker')) {
   }
 }
 
+// The campfire, close up, day and night — it is the one decoration
+// that has to look right in both.
+if (want('feuer')) {
+  for (const zeit of ['tag', 'nacht']) {
+    await page.goto(`http://localhost:${PORT}/?zeit=${zeit}`);
+    await page.evaluate(() => {
+      const placed = [
+        ['feuerstelle', 8, 6], ['feuerstelle', 6, 9], ['bank', 9, 7],
+        ['kirschbaum', 10, 9], ['laterne', 7, 7],
+      ].map(([d, x, y]) => ({ d, i: 'mathe', x, y }));
+      localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+        v: 1, stars: 40, candy: 90, seen: [], placed, strength: {},
+        sound: false, voice: false, name: '',
+      }));
+    });
+    await page.reload();
+    await page.waitForTimeout(900);
+    await page.locator('.island-card').first().tap();
+    await page.waitForTimeout(1600);
+    await page.evaluate(() => {
+      const l = document.querySelector('.labels');
+      if (l) l.style.display = 'none';
+    });
+    await page.waitForTimeout(200);
+    await shot(`feuer-${zeit}`);
+  }
+}
+
 // PORTRAIT. IPAD.md: "Both orientations, or lock one. Decide, do not
 // leave it to chance." A child holds a tablet whichever way it happens
 // to be, and a layout that only works one way round is a layout that

@@ -132,7 +132,7 @@ function decoSprite(art: string, seed: number, frame = 0): Baked {
     case 'mushrooms': return bake(`d:mush:${seed}`, () => D.mushrooms(seed));
     case 'beehive': return bake('d:hive', () => D.beehive());
     case 'birdbox': return bake('d:box', () => D.birdBox());
-    case 'campfire': return bake(`d:fire:${frame}`, () => D.campfire(frame));
+    case 'campfire': return bake('d:fire', () => D.campfire());
     case 'windmill': return bake(`d:mill:${frame}`, () => D.windmill(frame));
     default: break;
   }
@@ -347,6 +347,40 @@ export function screenToTile(v: View, px: number, py: number): { x: number; y: n
   return { x: Math.round(fx), y: Math.round(fy) };
 }
 
+/**
+ * Paint a fire.
+ *
+ * Drawn straight onto the frame rather than baked, because the whole
+ * point is that it never repeats — and a sprite that never repeats
+ * cannot be a sprite. Everything is snapped to whole pixels in the
+ * scaled space, so it is still pixel art and not a blur.
+ *
+ * The heat ramp goes citrus at the edges to the top of `glow` in the
+ * middle, which is the same trick the palette uses everywhere: the
+ * warm end of a ramp IS the light.
+ */
+function feuer(
+  ctx: CanvasRenderingContext2D, sx: number, sy: number, time: number, seed: number,
+): void {
+  for (const f of life.flammen(time, seed)) {
+    ctx.fillStyle = f.hitze > 0.85 ? shade(P.glow, 4)
+      : f.hitze > 0.6 ? shade(P.glow, 3)
+        : f.hitze > 0.35 ? shade(P.citrus, 3) : shade(P.fruit, 3);
+    // An ellipse as whole-pixel rows, so it stays crisp.
+    const cx = Math.round(sx + f.dx);
+    const cy = Math.round(sy + f.dy);
+    const h = Math.round(f.h);
+    for (let j = -h; j <= h; j++) {
+      const w = Math.round(f.w * Math.sqrt(Math.max(0, 1 - (j / (h + 0.5)) ** 2)));
+      ctx.fillRect(cx - w, cy + j, w * 2 + 1, 1);
+    }
+  }
+  ctx.fillStyle = shade(P.glow, 4);
+  for (const s of life.funken(time, seed)) {
+    ctx.fillRect(Math.round(sx + s.dx), Math.round(sy + s.dy), 1, 1);
+  }
+}
+
 // ------------------------------------------------------------- drawing
 
 export interface DrawOpts {
@@ -547,13 +581,12 @@ export function draw(
       } else if (built) {
         const d = deco(built.d);
         if (d) {
-          // The fire flickers fast and the mill turns slowly; anything
-          // else is a still.
-          const frame = d.art === 'campfire' ? Math.floor(o.time * 7) % 2
-            : d.art === 'windmill' ? Math.floor(o.time * 1.6) % 8
-              : 0;
+          // The mill turns; everything else is a still. The fire is a
+          // still too — its flame is painted on afterwards.
+          const frame = d.art === 'windmill' ? Math.floor(o.time * 1.6) % 8 : 0;
           const b = decoSprite(d.art, (x * 977 + y * 31) % 97 + 1, frame);
           ctx.drawImage(b.c, Math.round(sx - b.ax), Math.round(sy - b.ay));
+          if (d.art === 'campfire') feuer(ctx, sx, sy - 4, o.time, x * 31 + y);
         }
       } else if (tree) {
         const b = bake(`w:${treeKind}:${tree.seed % 64}`, () => S.wildTree(treeKind, tree.seed % 64 + 1));

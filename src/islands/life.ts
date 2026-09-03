@@ -363,3 +363,69 @@ export function onWater(islandId: string, x: number, y: number): boolean {
   const rx = Math.round(x), ry = Math.round(y);
   return !isLand(islandId, rx, ry) || isSand(islandId, rx, ry);
 }
+
+export interface Flamme {
+  /** Offset from the fire's tile centre, in sprite pixels. */
+  dx: number;
+  dy: number;
+  /** Half-width and half-height of the blob. */
+  w: number;
+  h: number;
+  /** 0 = the cool outer edge, 1 = the white-hot middle. */
+  hitze: number;
+}
+
+/**
+ * A fire, as blobs and sparks that are a pure function of the clock.
+ *
+ * The campfire used to be a two-frame sprite and the flame did not
+ * flicker, it WOBBLED — the same triangle leaning left and right, which
+ * reads as a mistake rather than as a fire. A real flame has no frames
+ * in it: it is a few overlapping tongues whose height and lean and
+ * width all change on different, unrelated rhythms, so nothing in it
+ * ever repeats.
+ *
+ * Stateless like everything else on the island, which is what lets it
+ * be drawn straight onto the frame instead of baked.
+ */
+export function flammen(time: number, seed: number): Flamme[] {
+  const out: Flamme[] = [];
+  const s = hash(seed) * 10;
+  for (let i = 0; i < 4; i++) {
+    // Three unrelated frequencies per tongue. Anything that shares a
+    // period with its neighbour beats against it and the whole fire
+    // starts to pulse as one thing.
+    const t = time * (2.3 + i * 0.53) + s + i * 1.9;
+
+    // HOTTEST AT THE BOTTOM. The first version had it the other way
+    // round — near-white at the tip and orange at the base — and the
+    // campfire came out looking like a white feather stuck in the
+    // stones. A flame is white where the fuel is and red where it is
+    // running out.
+    out.push({
+      dx: Math.sin(time * (1.5 + i * 0.37) + s) * (0.5 + i * 0.85),
+      dy: -2 - i * 2.6,
+      w: Math.max(1, 3.6 - i * 0.75 + Math.sin(t * 1.7) * 0.5),
+      h: Math.max(1, 2.6 - i * 0.35 + Math.sin(t) * 0.7),
+      hitze: 1 - i / 3.2,
+    });
+  }
+  return out;
+}
+
+/** Sparks going up off a fire. Each one is a pure function of its index. */
+export function funken(time: number, seed: number): { dx: number; dy: number }[] {
+  const out: { dx: number; dy: number }[] = [];
+  for (let i = 0; i < 5; i++) {
+    const period = 1.3 + hash(seed + i * 31) * 1.1;
+    const t = ((time / period) + hash(seed * 7 + i)) % 1;
+    // They fade out well before the top, so the column of sparks has an
+    // end to it rather than reaching off the screen.
+    if (t > 0.8) continue;
+    out.push({
+      dx: Math.sin(t * 5 + i * 2.2) * (1.5 + t * 4),
+      dy: -9 - t * 15,
+    });
+  }
+  return out;
+}
