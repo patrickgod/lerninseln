@@ -59,6 +59,8 @@ const DE = {
   'house.silben': 'Das Haus der Silben',
   'house.woerter': 'Das Haus der ersten Wörter',
   'house.reime': 'Das Haus der Reime',
+  'house.schreiben': 'Das Haus der Schreiber',
+  'house.silbenwoerter': 'Das Haus der Silbenwörter',
   'house.formen': 'Das Haus der Formen',
   'house.muster': 'Das Haus der Muster',
 
@@ -74,6 +76,8 @@ const DE = {
   'house.silben.sub': 'Silben klatschen',
   'house.woerter.sub': 'Erstes Lesen — Bild und Wort zusammenbringen',
   'house.reime.sub': 'Reime hören — Haus und Maus',
+  'house.schreiben.sub': 'Silben schreiben — mit dem Finger',
+  'house.silbenwoerter.sub': 'Zwei Silben, ein Wort — Ma und ma macht Mama',
   'house.formen.sub': 'Kreis, Dreieck, Quadrat — hören und finden',
   'house.muster.sub': 'Muster fortsetzen — was kommt als Nächstes?',
 
@@ -85,6 +89,8 @@ const DE = {
   'round.again': 'Nochmal',
   'round.toIsland': 'Zur Insel',
   'round.leave': 'Zurück',
+  'round.show': 'Zeigen',
+  'round.write': 'Schreibe',
 
   // The prompts a house speaks when it opens. These are the lines the
   // voice actually says, so they are short, warm, and contain the whole
@@ -137,6 +143,15 @@ const DE = {
   'say.reimeErst':
     'Willkommen im Haus der Reime! Zwei Wörter reimen sich, wenn sie hinten gleich klingen. Haus und Maus zum Beispiel. Welches Wort reimt sich?',
   'say.reime': 'Die Reime! Welches Wort klingt hinten gleich?',
+
+  'say.schreibenErst':
+    'Willkommen im Haus der Schreiber! Hier schreibst du mit dem Finger. Fang immer beim roten Punkt an und folge dem Pfeil. Lass dir Zeit.',
+  'say.schreiben': 'Die Schreiber! Fang beim roten Punkt an.',
+
+  'say.silbenwoerterErst':
+    'Willkommen im Haus der Silbenwörter! Zwei Silben ergeben zusammen ein Wort. Ma und ma macht Mama. Schreib das ganze Wort.',
+  'say.silbenwoerter': 'Die Silbenwörter! Schreib das ganze Wort.',
+  'say.zeigen': 'Schau, so geht es.',
 
   'say.formenErst':
     'Willkommen im Haus der Formen! Ich sage dir eine Form, und du tippst sie an. Zum Beispiel: den Kreis.',

@@ -30,7 +30,16 @@ export interface Stroke {
   dot?: boolean;
 }
 
-/** An ellipse arc, anti-clockwise, for the round letters. */
+/**
+ * An ellipse arc.
+ *
+ * Screen coordinates: y grows DOWNWARD, so an increasing angle sweeps
+ * CLOCKWISE and a decreasing one sweeps anti-clockwise. Getting that
+ * backwards is why the first draft of this file had every round letter
+ * turning the wrong way and both `u` and `U` drawn as arches over the
+ * top instead of bowls underneath — all four of which looked like
+ * letters and none of which were.
+ */
 function bogen(
   cx: number, cy: number, rx: number, ry: number,
   vonGrad: number, bisGrad: number, n = 14,
@@ -73,7 +82,7 @@ export const GLYPHS: Record<string, Stroke[]> = {
 
   // Anti-clockwise from the top.
   O: [
-    { pts: bogen(0.50, 0.53, 0.40, 0.47, -90, 270) },
+    { pts: bogen(0.50, 0.53, 0.40, 0.47, -90, -450, 20) },
   ],
 
   I: [
@@ -92,9 +101,30 @@ export const GLYPHS: Record<string, Stroke[]> = {
     {
       pts: [
         [0.12, 0.06], [0.12, 0.66],
-        ...bogen(0.50, 0.66, 0.38, 0.34, 180, 360, 10),
+        ...bogen(0.50, 0.66, 0.38, 0.34, 180, 0, 12),
         [0.88, 0.06],
       ],
+    },
+  ],
+
+  // Three strokes, every one of them downward. The two-stroke version
+  // (stem, then diagonal-and-up-the-right-side) makes the child push
+  // the pencil up a long straight line, which is the habit all of these
+  // stroke orders exist to avoid.
+  N: [
+    { pts: [[0.15, 0.06], [0.15, 1.00]] },
+    { pts: [[0.15, 0.06], [0.85, 1.00]] },
+    { pts: [[0.85, 0.06], [0.85, 1.00]] },
+  ],
+
+  // The small s, stretched to full height. Same movement, same order.
+  S: [
+    {
+      pts: ([
+        [0.80, 0.20], [0.66, 0.09], [0.48, 0.06], [0.30, 0.12], [0.22, 0.26],
+        [0.27, 0.40], [0.45, 0.47], [0.62, 0.55], [0.75, 0.66], [0.78, 0.80],
+        [0.66, 0.93], [0.46, 0.99], [0.27, 0.95], [0.18, 0.85],
+      ] as [number, number][]),
     },
   ],
 
@@ -103,7 +133,7 @@ export const GLYPHS: Record<string, Stroke[]> = {
   // A circle and a stem, which is Grundschrift's `a` — not the
   // two-storey printed one, which no first-grader writes.
   a: [
-    { pts: bogen(0.48, MITTE, 0.32, (1 - XH) / 2 - 0.02, -60, 300) },
+    { pts: bogen(0.48, MITTE, 0.32, (1 - XH) / 2 - 0.02, -55, -415, 18) },
     { pts: [[0.82, XH + 0.04], [0.82, 1.00]] },
   ],
 
@@ -111,9 +141,11 @@ export const GLYPHS: Record<string, Stroke[]> = {
   e: [
     {
       pts: [
-        [0.16, 0.70], [0.84, 0.66],
-        ...bogen(0.50, MITTE, 0.34, (1 - XH) / 2 - 0.01, -20, 200, 12),
-        [0.84, 0.94],
+        // the bar first...
+        [0.16, 0.70], [0.82, 0.64],
+        // ...then up over the top, all the way round, and out at the
+        // bottom right. One movement, which is how it is taught.
+        ...bogen(0.50, MITTE, 0.34, (1 - XH) / 2 - 0.01, -20, -330, 18),
       ],
     },
   ],
@@ -142,7 +174,7 @@ export const GLYPHS: Record<string, Stroke[]> = {
   ],
 
   o: [
-    { pts: bogen(0.50, MITTE, 0.34, (1 - XH) / 2 - 0.01, -90, 270) },
+    { pts: bogen(0.50, MITTE, 0.34, (1 - XH) / 2 - 0.01, -90, -450, 18) },
   ],
 
   // Down, round the bottom, up — and no tail, which is what
@@ -151,17 +183,20 @@ export const GLYPHS: Record<string, Stroke[]> = {
     {
       pts: [
         [0.14, XH], [0.14, 0.80],
-        ...bogen(0.50, 0.80, 0.36, 0.19, 180, 360, 10),
+        ...bogen(0.50, 0.80, 0.36, 0.19, 180, 0, 12),
         [0.86, XH],
       ],
     },
   ],
 
+  // Authored point by point. Two half-ellipses stuck together never
+  // met in the middle and came out as a knot.
   s: [
     {
       pts: [
-        ...bogen(0.52, XH + 0.16, 0.28, 0.16, -30, -200, 8),
-        ...bogen(0.48, 1 - 0.16, 0.28, 0.16, 20, 200, 8),
+        [0.80, 0.47], [0.68, 0.39], [0.50, 0.38], [0.32, 0.42], [0.24, 0.52],
+        [0.28, 0.62], [0.44, 0.67], [0.60, 0.72], [0.72, 0.79], [0.74, 0.88],
+        [0.64, 0.96], [0.46, 0.99], [0.28, 0.96], [0.20, 0.89],
       ],
     },
   ],
@@ -211,6 +246,9 @@ export const SILBEN: string[] = [
  * whole difference between this and a handwriting worksheet.
  */
 export const SILBENWOERTER: { wort: string; teile: [string, string] }[] = [
+  // Two syllables and no more. `Salami` was in here and is three —
+  // Sa-la-mi — which made the split a lie the moment it was spoken
+  // aloud with the join in it.
   { wort: 'Mama', teile: ['Ma', 'ma'] },
   { wort: 'Oma', teile: ['O', 'ma'] },
   { wort: 'Lea', teile: ['Le', 'a'] },
@@ -224,7 +262,8 @@ export const SILBENWOERTER: { wort: string; teile: [string, string] }[] = [
   { wort: 'Uli', teile: ['U', 'li'] },
   { wort: 'Nase', teile: ['Na', 'se'] },
   { wort: 'Sonne', teile: ['Son', 'ne'] },
-  { wort: 'Salami', teile: ['Sa', 'lami'] },
+  { wort: 'Ole', teile: ['O', 'le'] },
+  { wort: 'Emma', teile: ['Em', 'ma'] },
 ];
 
 // ------------------------------------------------------ the checkpoints

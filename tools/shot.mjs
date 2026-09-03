@@ -332,6 +332,64 @@ if (want('feuer')) {
   }
 }
 
+// The writing houses. The tracer is the one screen in the app that is
+// operated with a drag rather than a tap, so the shot drives it that
+// way: it follows the first stroke of the first letter with the mouse.
+if (want('schreiben')) {
+  for (const [name, label] of [['schreiben', 'Schreiber'], ['silbenwoerter', 'Silbenwörter']]) {
+    // ?perf=1 exposes the stroke the widget is waiting for, which is
+    // how the shot can write instead of just posing.
+    await page.goto(`http://localhost:${PORT}/?perf=1`);
+    await page.evaluate(() => {
+      localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+        v: 1, stars: 200, candy: 0, seen: [], placed: [], strength: {},
+        sound: true, voice: false, name: '',
+      }));
+    });
+    await page.reload();
+    await page.waitForTimeout(900);
+    await page.locator('.island-card').nth(1).tap();
+    await page.waitForTimeout(1300);
+    const lb = page.locator('.house-label').filter({ hasText: label });
+    const bx = await lb.first().boundingBox();
+    if (!bx) continue;
+    await page.touchscreen.tap(bx.x + bx.width / 2, bx.y - 30);
+    await page.waitForTimeout(1400);
+    await shot(name);
+
+    // Actually write some of it, so the screenshot shows ink and a
+    // filled-in road rather than an untouched template. Same trick the
+    // verification suite uses: ask the widget for the stroke it is
+    // expecting and follow it.
+    const tb = await page.locator('.tracer').boundingBox();
+    if (tb) {
+      for (let n = 0; n < 3; n++) {
+        const pfad = await page.evaluate(() => (window.__zug ? window.__zug() : []));
+        if (!pfad.length) break;
+        if (pfad.length === 1) {
+          await page.mouse.move(tb.x + pfad[0].x, tb.y + pfad[0].y);
+          await page.mouse.down();
+          await page.mouse.up();
+        } else {
+          // Stop part way through the last one, so the shot catches a
+          // stroke in progress.
+          const bis = n === 2 ? Math.floor(pfad.length * 0.55) : pfad.length;
+          await page.mouse.move(tb.x + pfad[0].x, tb.y + pfad[0].y);
+          await page.mouse.down();
+          for (let k = 0; k < bis; k++) {
+            await page.mouse.move(tb.x + pfad[k].x, tb.y + pfad[k].y);
+          }
+          if (n < 2) await page.mouse.up();
+        }
+        await page.waitForTimeout(120);
+      }
+      await page.waitForTimeout(300);
+      await shot(`${name}-gezogen`);
+      await page.mouse.up();
+    }
+  }
+}
+
 // PORTRAIT. IPAD.md: "Both orientations, or lock one. Decide, do not
 // leave it to chance." A child holds a tablet whichever way it happens
 // to be, and a layout that only works one way round is a layout that

@@ -87,6 +87,98 @@ names.forEach((name, i) => {
 `);
 }
 
+// ------------------------------------------------------- the alphabet
+
+if (doIt('schrift')) {
+  await sheet('schrift', `
+import { GLYPHS, checkpoints } from '../src/games/schrift.js';
+
+// Each letter with its strokes NUMBERED and ARROWED. The direction is
+// the whole content of this font — a letter drawn bottom-up looks
+// perfect and is wrong — so the sheet has to show the direction, not
+// the shape.
+const CELL = 150, COLS = 7, LABEL = 30, PAD = 14;
+const names = Object.keys(GLYPHS);
+const rows = Math.ceil(names.length / COLS);
+
+const c = document.createElement('canvas');
+c.width = COLS * CELL + PAD;
+c.height = rows * (CELL + LABEL) + PAD;
+document.body.appendChild(c);
+const ctx = c.getContext('2d')!;
+ctx.fillStyle = '#f8f0dc';
+ctx.fillRect(0, 0, c.width, c.height);
+
+const FARBE = ['#c93a44', '#3f5c85', '#4d8244', '#8f5423'];
+
+names.forEach((ch, i) => {
+  const col = i % COLS, row = (i / COLS) | 0;
+  const ox = PAD + col * CELL + 24;
+  const oy = PAD + row * (CELL + LABEL) + 12;
+  const S = CELL - 60;
+
+  // writing lines: top, x-height, baseline
+  ctx.strokeStyle = '#c9dcec';
+  ctx.lineWidth = 2;
+  for (const y of [0, 0.38, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(ox - 8, oy + y * S);
+    ctx.lineTo(ox + S + 8, oy + y * S);
+    ctx.stroke();
+  }
+
+  GLYPHS[ch].forEach((stroke, si) => {
+    const col2 = FARBE[si % FARBE.length];
+    const cps = checkpoints(stroke, 0.06);
+    ctx.strokeStyle = col2;
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    cps.forEach((p, k) => {
+      const x = ox + p.x * S, y = oy + p.y * S;
+      if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // where the hand starts
+    const a = cps[0];
+    ctx.fillStyle = '#241d2b';
+    ctx.beginPath();
+    ctx.arc(ox + a.x * S, oy + a.y * S, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f8f0dc';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(si + 1), ox + a.x * S, oy + a.y * S + 1);
+
+    // and where it ends up
+    if (cps.length > 1) {
+      const z = cps[cps.length - 1], y2 = cps[cps.length - 2];
+      const ang = Math.atan2(z.y - y2.y, z.x - y2.x);
+      const zx = ox + z.x * S, zy = oy + z.y * S;
+      ctx.fillStyle = col2;
+      ctx.beginPath();
+      ctx.moveTo(zx + Math.cos(ang) * 13, zy + Math.sin(ang) * 13);
+      ctx.lineTo(zx + Math.cos(ang + 2.5) * 12, zy + Math.sin(ang + 2.5) * 12);
+      ctx.lineTo(zx + Math.cos(ang - 2.5) * 12, zy + Math.sin(ang - 2.5) * 12);
+      ctx.closePath();
+      ctx.fill();
+    }
+  });
+
+  ctx.fillStyle = '#241d2b';
+  ctx.font = 'bold 22px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(ch + '  (' + GLYPHS[ch].length + ')', ox + S / 2, oy + S + 34);
+});
+
+(window as any).ready = true;
+`);
+}
+
 // ------------------------------------------------------------- shapes
 
 if (doIt('formen')) {

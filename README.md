@@ -14,7 +14,7 @@ island slowly becomes theirs and nobody else's.
 | island | houses |
 |---|---|
 | **Die Insel der Zahlen** | Verliebte Zahlen · Nachbarzahlen · Rechenmeister · Zwillinge |
-| **Die Insel der Sprache** | Erste Laute · Silben · Erste Wörter · Reime |
+| **Die Insel der Sprache** | Erste Laute · Silben · **Schreiber** · **Silbenwörter** · Erste Wörter · Reime |
 | **Die Insel der Entdecker** | Formen · Muster |
 
 The third island asks its questions with **no word on the screen at
@@ -40,7 +40,8 @@ npm run build          # typechecks, then bundles into dist/
 npm run serve          # http://localhost:8322
 npm run verify         # plays whole rounds at iPad size, with taps only
 node tools/shot.mjs    # screenshots every screen into shots/
-node tools/contact.mjs # contact sheets of every sprite
+node tools/contact.mjs # contact sheets: sprites, word pictures, shapes,
+                       # and the writing alphabet with its stroke order
 npm run voice          # regenerate the spoken lines with ElevenLabs
 node tools/icons.mjs   # regenerate the home-screen icons
 ```
@@ -102,6 +103,20 @@ lantern is lit, the campfire burns and fireflies drift over the wood.
 **Juice**, on the good things only. Hearts burst off the card the child
 touched, the stars fly into the counter one at a time, a new house lands
 with dust and six pixels of screen shake. Nothing fires on a mistake.
+
+**Writing with a finger.** The Haus der Schreiber and the Haus der
+Silbenwörter are traced, not tapped: a child follows the letter and the
+app checks that they followed it — in the right order, in the right
+direction, through the whole of it. La, Li, Mo, and then Mama, Oma,
+Lea, Limo.
+
+Tracing rather than handwriting recognition, on purpose. A classifier
+has to guess, and every guess it gets wrong tells a child they wrote it
+badly when they did not. More importantly, a finished letter cannot
+tell you HOW it was made: an M drawn from the bottom up looks identical
+to a correct one and is a habit that costs years. Direction and stroke
+order are the actual content of first-grade writing and they only exist
+while the pencil is moving.
 
 **A postcard** the parent can save and show.
 

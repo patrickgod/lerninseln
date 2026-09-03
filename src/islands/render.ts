@@ -97,6 +97,8 @@ const ACCENTS: Record<string, readonly string[]> = {
   'reime': P.foam,
   'formen': P.backlit,
   'muster': P.citrus,
+  'schreiben': P.plum,
+  'silbenwoerter': P.fruit,
 };
 
 function bake(key: string, make: () => S.Sprite): Baked {

@@ -20,7 +20,14 @@ export type Prompt =
   /** "Tippe auf den Kreis." The shape is named aloud, never written. */
   | { kind: 'form'; frage: string }
   /** A row of shapes with the last one missing. */
-  | { kind: 'muster'; reihe: string[] };
+  | { kind: 'muster'; reihe: string[] }
+  /**
+   * Write this, with a finger.
+   *
+   * The only prompt with no answer cards at all: the answer IS the
+   * tracing, and the round moves on when the last stroke lands.
+   */
+  | { kind: 'schreiben'; text: string; teile?: [string, string] };
 
 export interface Question {
   /**

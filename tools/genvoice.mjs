@@ -136,6 +136,32 @@ function words() {
   return out;
 }
 
+/**
+ * The syllables and the two-syllable words, for the writing houses.
+ *
+ * The syllables are said on their own — "Ma." — because a syllable is
+ * exactly what the child is about to write and hearing it whole is the
+ * point. The words are said twice: once joined and once with the join
+ * audible, which is how a teacher says them.
+ */
+function schreibzeug() {
+  const src = readFileSync('src/games/schrift.ts', 'utf8');
+  const out = {};
+
+  const sil = src.match(/SILBEN: string\[\] = \[([\s\S]*?)\]/);
+  if (sil) {
+    for (const q of sil[1].matchAll(/'([^']+)'/g)) {
+      out[`schreib-${q[1].toLowerCase()}`] = `${q[1]}.`;
+    }
+  }
+
+  const wr = src.matchAll(/\{\s*wort:\s*'([^']+)',\s*teile:\s*\['([^']+)',\s*'([^']+)'\]/g);
+  for (const m of wr) {
+    out[`schreib-${m[1].toLowerCase()}`] = `${m[1]}. ${m[2]} — ${m[3]}. ${m[1]}.`;
+  }
+  return out;
+}
+
 // The numerals, spoken. A child who cannot read still needs to hear
 // which number the question is about, and "sieben" is a different
 // retrieval from seeing a 7.
@@ -235,7 +261,7 @@ if (SAMPLES) {
 }
 
 mkdirSync('assets/voice', { recursive: true });
-const all = { ...spokenLines(), ...words(), ...numbers() };
+const all = { ...spokenLines(), ...words(), ...numbers(), ...schreibzeug() };
 const names = Object.keys(all);
 
 // ElevenLabs bills characters, and this whole set is regenerated every

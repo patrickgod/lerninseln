@@ -759,3 +759,48 @@ a.dl:active { transform: translateY(4px); box-shadow: 0 0 0 var(--ink); }
   font-size: clamp(28px, 4.5vh, 46px);
   border-style: dashed;
 }
+
+/* ------------------------------------------------------- the writing */
+
+/* The word above the writing surface, split at the join so a child SEES
+   the two syllables that are about to become one word. */
+.schreib-wort {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: clamp(34px, 6vh, 62px);
+  color: var(--chalk);
+  letter-spacing: 0.02em;
+}
+
+.schreib-wort .trenner {
+  color: var(--chalk-light);
+  font-size: 0.7em;
+}
+
+.tracer {
+  display: block;
+  background: var(--plaster);
+  border: 3px solid var(--ink);
+  border-radius: 22px;
+  box-shadow: 0 5px 0 var(--ink);
+  /* A finger drawing here must never scroll or select the page. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* The writing round has two buttons instead of answer cards, and they
+   are helpers rather than answers. Sized for their words, so nothing
+   wraps: the answer-card rules do not apply to them. */
+.round .answers .speak { min-width: 92px; }
+
+.round .answers button {
+  width: auto;
+  min-width: 120px;
+  height: auto;
+  min-height: 76px;
+  font-size: clamp(22px, 3.2vh, 32px);
+  padding: 12px 26px;
+  white-space: nowrap;
+}

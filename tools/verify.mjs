@@ -304,6 +304,105 @@ const askedShapes = await playRound(false);
 check('a shapes round can be played to the end',
   await page.locator('.sheet').count() > 0, `${askedShapes} answers given`);
 
+// ------------------------------------------------------- the writing
+//
+// The hardest thing in the app to check, and the one it would be
+// easiest to ship broken: a widget that is operated with a DRAG rather
+// than a tap, whose whole job is to decide whether a movement was the
+// right movement.
+//
+// So the suite writes. It asks the widget for the stroke it is
+// currently expecting — behind the same `?perf=1` flag as the frame
+// timers — and drags along it. Recomputing the layout here would be
+// testing a copy of the maths rather than the maths.
+
+await page.goto(`${BASE}?perf=1`);
+await page.evaluate(() => {
+  localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+    v: 1, stars: 200, candy: 0, seen: [], placed: [], strength: {},
+    sound: false, voice: false, name: '',
+  }));
+});
+await page.reload();
+await page.waitForTimeout(800);
+await page.locator('.island-card').nth(1).tap();
+await page.waitForTimeout(1200);
+const schreibLabel = page.locator('.house-label').filter({ hasText: 'Schreiber' });
+const wb = await schreibLabel.first().boundingBox();
+if (wb) {
+  await page.touchscreen.tap(wb.x + wb.width / 2, wb.y - 30);
+  await page.waitForTimeout(1300);
+}
+check('the writing house opens a tracing surface',
+  await page.locator('.tracer').count() === 1);
+check('and deals no answer cards at all',
+  await page.locator('.answers button').count() === 2, 'only the two helpers');
+
+/**
+ * Follow one stroke with the pointer, the way a finger would.
+ *
+ * A single-point path is the dot on an `i`, which is TOUCHED rather
+ * than drawn — the first version of this helper treated it as a
+ * malformed stroke and gave up, so every syllable with an i in it
+ * silently ended the test two strokes early.
+ */
+async function zieheZug() {
+  const box = await page.locator('.tracer').boundingBox();
+  const pfad = await page.evaluate(() => (window.__zug ? window.__zug() : []));
+  if (!box || pfad.length === 0) return false;
+  if (pfad.length === 1) {
+    await page.mouse.move(box.x + pfad[0].x, box.y + pfad[0].y);
+    await page.mouse.down();
+    await page.mouse.up();
+    return true;
+  }
+  await page.mouse.move(box.x + pfad[0].x, box.y + pfad[0].y);
+  await page.mouse.down();
+  for (const p of pfad) await page.mouse.move(box.x + p.x, box.y + p.y);
+  await page.mouse.up();
+  return true;
+}
+
+// A scribble first: straight across the letter, which visits no
+// checkpoint in order and must therefore do nothing at all.
+{
+  const box = await page.locator('.tracer').boundingBox();
+  await page.mouse.move(box.x + 20, box.y + box.height / 2);
+  await page.mouse.down();
+  for (let i = 0; i <= 20; i++) {
+    await page.mouse.move(box.x + 20 + (box.width - 40) * (i / 20),
+      box.y + box.height / 2 + Math.sin(i) * 30);
+  }
+  await page.mouse.up();
+  await page.waitForTimeout(200);
+}
+check('a scribble across the letter does not count as writing it',
+  await page.locator('.sheet').count() === 0
+  && await page.locator('.tracer').count() === 1);
+
+// Now write it properly, stroke by stroke, until the question changes.
+let zuege = 0;
+for (let i = 0; i < 24; i++) {
+  if (await page.locator('.tracer').count() === 0) break;
+  if (!(await zieheZug())) break;
+  zuege++;
+  await page.waitForTimeout(140);
+  // Finishing the last stroke starts a pause before the next question.
+  if (await page.evaluate(() => (window.__zug ? window.__zug().length : 0)) === 0) {
+    await page.waitForTimeout(1200);
+    break;
+  }
+}
+check('following the strokes writes the syllable', zuege >= 2, `${zuege} strokes traced`);
+
+const nachSchrift = await page.evaluate(() => {
+  const raw = localStorage.getItem('lerninseln.save.v1');
+  return raw ? JSON.parse(raw) : null;
+});
+check('and the round moved on',
+  await page.locator('.pip.done').count() >= 1 || (nachSchrift && nachSchrift.stars > 200),
+  `pips done: ${await page.locator('.pip.done').count()}`);
+
 // ----------------------------------------------------------- settings
 //
 // AGENTS.md rule 14: sound is optional and off-switchable in TWO TAPS,

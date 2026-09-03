@@ -20,6 +20,7 @@ import { strengthOf } from '../core/state.js';
 import { WOERTER, REIME } from './woerter.js';
 import { hasBild } from './wortbilder.js';
 import { FORMEN, musterZeile, type Form } from './formen.js';
+import { SILBEN, SILBENWOERTER, kannSchreiben } from './schrift.js';
 
 /** Deterministic-enough randomness. Rounds should not be reproducible. */
 function pickOne<T>(arr: T[]): T {
@@ -388,6 +389,61 @@ function kindOf(row: string[]): string {
   return row[1] === row[2] ? 'abb' : 'ab';
 }
 
+// ----------------------------------------------- Das Haus der Schreiber
+
+/**
+ * Write a syllable with your finger.
+ *
+ * The syllables are the German Fibel order — La Le Li Lo Lu, Ma Me Mi
+ * Mo Mu — because those two consonants and the five vowels between them
+ * already make real words a child can read: Mama, Oma, Lea, Limo. A
+ * syllable drill that never becomes a word is handwriting practice; one
+ * that does is reading.
+ *
+ * There are no answer cards. The answer is the tracing.
+ */
+export const schreiben: Game = {
+  id: 'schreiben',
+  facts: () => SILBEN.filter(kannSchreiben).map((s) => `sc:${s}`),
+  next(pick) {
+    const fact = pick(this.facts());
+    return {
+      fact,
+      prompt: { kind: 'schreiben', text: fact.slice(3) },
+      choices: [],
+      correct: 0,
+    } as Question;
+  },
+};
+
+// ------------------------------------------- Das Haus der Silbenwörter
+
+/**
+ * Two syllables, written one after the other, making a word.
+ *
+ * Patrick asked for exactly this — "die Worte die aus den zwei silben
+ * zusammengehören" — and it is the step that makes the previous house
+ * mean something: a child who has written Ma and ma separately writes
+ * Mama and has produced a word rather than a shape.
+ *
+ * The word is spoken and its two parts are shown split, because
+ * hearing the join is the point: MA-MA.
+ */
+export const silbenwoerter: Game = {
+  id: 'silbenwoerter',
+  facts: () => SILBENWOERTER.filter((w) => kannSchreiben(w.wort)).map((w) => `sw:${w.wort}`),
+  next(pick) {
+    const fact = pick(this.facts());
+    const w = SILBENWOERTER.find((x) => x.wort === fact.slice(3)) ?? SILBENWOERTER[0];
+    return {
+      fact,
+      prompt: { kind: 'schreiben', text: w.wort, teile: w.teile },
+      choices: [],
+      correct: 0,
+    } as Question;
+  },
+};
+
 // ---------------------------------------------------------------- glue
 
 /**
@@ -456,7 +512,20 @@ export const GAMES: Record<string, Game> = {
   'reime': reime,
   'formen': formen,
   'muster': muster,
+  'schreiben': schreiben,
+  'silbenwoerter': silbenwoerter,
 };
+
+/**
+ * How many questions a round of this house has.
+ *
+ * Tracing a whole word takes as long as five taps, so the writing
+ * houses ask five things rather than ten. A round is meant to be about
+ * three minutes whatever is in it.
+ */
+export function rundenLaenge(gameId: string): number {
+  return gameId === 'schreiben' ? 6 : gameId === 'silbenwoerter' ? 4 : 10;
+}
 
 /** Build a whole round: ten questions, no fact twice in a row. */
 export function buildRound(gameId: string, n = 10): Question[] {

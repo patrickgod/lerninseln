@@ -237,10 +237,73 @@ arranges is theirs.
 | Zahlen | Das Haus der Zwillinge | 80 Sterne | doubling to 20 |
 | Sprache | Das Haus der ersten Laute | from the start | initial sounds, from a picture |
 | Sprache | Das Haus der Silben | 20 Sterne | clapping syllables |
-| Sprache | Das Haus der ersten Wörter | 45 Sterne | first reading: picture to word |
-| Sprache | Das Haus der Reime | 85 Sterne | rhyme awareness, by ear |
+| Sprache | Das Haus der Schreiber | 40 Sterne | writing syllables with a finger |
+| Sprache | Das Haus der Silbenwörter | 70 Sterne | two syllables making one word |
+| Sprache | Das Haus der ersten Wörter | 100 Sterne | first reading: picture to word |
+| Sprache | Das Haus der Reime | 130 Sterne | rhyme awareness, by ear |
 | Entdecker | Das Haus der Formen | from the start | naming shapes, by ear |
 | Entdecker | Das Haus der Muster | 30 Sterne | continuing a pattern |
+
+## Writing
+
+Patrick, on the exercise his son actually has in front of him: *"eine
+der ersten Sprachuebungen sind silben vorlesen und auch selber
+schreiben. wie Li, La, Lu, Lo, Limo... und die Worte die aus den zwei
+silben zusammengehoeren?"*
+
+Two houses. The first writes syllables — La Le Li Lo Lu, Ma Me Mi Mo Mu
+— and the second writes the words they make: Mama, Oma, Lea, Lilo,
+Limo, Mimi, Emil, Uli. The word is shown split at the join, **Ma-ma**,
+and spoken with the join audible, because hearing where a word comes
+apart is half of what the exercise is for.
+
+The syllable order is the classic German Fibel sequence and it is not
+arbitrary. M, L, A, O, I, E, U come first because between them they
+already make real words a child can read on their first day. A syllable
+drill that never becomes a word is handwriting practice; one that does
+is reading.
+
+### Tracing, not recognition
+
+The obvious alternative is to let the child write freely and classify
+what they drew. It is the wrong choice here, for two reasons, and the
+second matters more.
+
+A classifier has to **guess**, and a six-year-old's letters vary
+enormously. Every guess it gets wrong is the app telling a child they
+wrote it badly when they did not — which rule 9 forbids outright, and
+rightly, because that lesson sticks for decades.
+
+And a finished letter **cannot tell you how it was made**. An M drawn
+from the bottom up looks identical to a correct one and is a habit that
+will slow the child down for years. Direction and stroke order are the
+actual content of first-grade writing, and they only exist while the
+pencil is moving. Tracing is the only way to see them.
+
+So the letters are a **stroke font**, not a picture font: every glyph
+is a list of strokes in the direction a hand really moves, in
+Grundschrift, with the stroke orders the primers use. Verticals go top
+to bottom. Round letters go anti-clockwise from the top. A letter is
+split where the hand would really lift and nowhere else.
+
+### How the check works, and how it cannot fail anybody
+
+Each stroke is a run of checkpoints along its path. The child has to
+touch them **in order**, each within a radius of about a fingertip,
+without lifting. Forgiving enough that nobody has to be accurate —
+only to go the right way — and strict enough that a scribble across the
+letter does not pass, because a scribble does not visit the checkpoints
+in order.
+
+Straying does nothing at all. There is no buzzer, no red, no score to
+lose; the stroke simply does not advance, and a child can take as long
+as they like or press **Zeigen** and watch it done. Finishing IS the
+right answer, which is also why a writing round can never end with
+fewer stars than it had questions.
+
+Writing takes longer than tapping, so those rounds are six and four
+questions rather than ten. A round is meant to be three minutes
+whatever is in it.
 
 ## The island with no words on it
 

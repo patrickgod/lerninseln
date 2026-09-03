@@ -21,13 +21,12 @@ import * as render from './islands/render.js';
 import { DECOR, deco } from './islands/decor.js';
 import * as S from './islands/sprites.js';
 import * as D from './islands/deko.js';
-import { buildRound } from './games/games.js';
+import { buildRound, rundenLaenge } from './games/games.js';
 import type { Question, Prompt } from './games/types.js';
 import { WOERTER, stem } from './games/woerter.js';
 import { bildCanvas, hasBild } from './games/wortbilder.js';
 import { formCanvas, type Form } from './games/formen.js';
-
-const QUESTIONS_PER_ROUND = 10;
+import { makeTracer, type Tracer } from './ui/tracer.js';
 
 const stage = document.getElementById('stage') as HTMLCanvasElement;
 const fxCanvas = document.getElementById('fx') as HTMLCanvasElement;
@@ -227,6 +226,8 @@ function frame(now: number): void {
       });
     }
   }
+
+  if (tracer) tracer.tick(time);
 
   const t2 = performance.now();
   const dpr = Math.min(3, window.devicePixelRatio || 1);
@@ -859,10 +860,16 @@ interface RoundState {
 }
 
 let round: RoundState | null = null;
+/** The writing surface, while a writing house is open. */
+let tracer: Tracer | null = null;
 
 function startRound(house: HouseDef): void {
   screen = 'round';
-  round = { house, qs: buildRound(house.game, QUESTIONS_PER_ROUND), i: 0, right: 0, busy: false };
+  round = {
+    house,
+    qs: buildRound(house.game, rundenLaenge(house.game)),
+    i: 0, right: 0, busy: false,
+  };
   greetHouse(house);
   // The words a language round will need, fetched while the greeting
   // plays, so the first one does not arrive late.
@@ -875,6 +882,8 @@ function startRound(house: HouseDef): void {
 function drawQuestion(): void {
   if (!round) return;
   stopSequence();
+  tracer?.destroy();
+  tracer = null;
   clear();
   const q = round.qs[round.i];
   const wrap = el('div', 'round');
@@ -882,6 +891,8 @@ function drawQuestion(): void {
   const top = el('div', 'top');
   top.appendChild(button(t('round.leave'), () => {
     round = null;
+    tracer?.destroy();
+    tracer = null;
     screen = 'island';
     drawIslandUi();
   }));
@@ -908,6 +919,24 @@ function drawQuestion(): void {
   const wordy = !shapey && q.choices.some((c) => c.length > 2);
   const answers = el('div',
     `answers${shapey ? ' shapes' : wordy ? ' words' : ''}`);
+
+  // A writing question has no cards at all — the answer is the tracing.
+  // What it gets instead is a way to hear the word again and a way to
+  // be shown, which are the two things a stuck six-year-old needs.
+  if (q.prompt.kind === 'schreiben') {
+    const p = q.prompt;
+    const hoeren = button('▶', () => {
+      const w = p.teile ? p.text : p.text;
+      audio.say(`schreib-${w.toLowerCase()}`, w);
+    }, 'speak');
+    answers.appendChild(hoeren);
+    answers.appendChild(button(t('round.show'), () => {
+      tracer?.zeigen();
+      sayLine('say.zeigen');
+    }));
+    setTimeout(() => audio.say(`schreib-${p.text.toLowerCase()}`, p.text), 300);
+  }
+
   q.choices.forEach((label, idx) => {
     const b = el('button');
     if (label.startsWith('form:')) {
@@ -1005,6 +1034,44 @@ function promptView(p: Prompt, q: Question): HTMLElement {
       box.appendChild(row);
       break;
     }
+    case 'schreiben': {
+      // The word, split at the join, so the child SEES the two
+      // syllables that are about to become one word.
+      const kopf = el('div', 'schreib-wort');
+      if (p.teile) {
+        kopf.appendChild(el('span', 'silbe', p.teile[0]));
+        kopf.appendChild(el('span', 'trenner', '·'));
+        kopf.appendChild(el('span', 'silbe', p.teile[1]));
+      } else {
+        kopf.appendChild(el('span', 'silbe', p.text));
+      }
+      box.appendChild(kopf);
+
+      // Sized to what is left of the screen once the header and the
+      // buttons have had theirs.
+      const bw = Math.min(window.innerWidth - 40, 980);
+      const bh = Math.min(window.innerHeight * 0.46, 340);
+      const t = makeTracer({
+        text: p.text,
+        w: bw,
+        h: bh,
+        onZug: () => audio.pop(),
+        onGlyph: (gi) => {
+          audio.ping(gi);
+          const r = t.el.getBoundingClientRect();
+          fx.burst('funke', r.left + r.width / 2, r.top + r.height / 2,
+            { n: 7, speed: 130, up: 0.6, life: 0.6 });
+        },
+        onFertig: () => {
+          // Writing has no wrong answer to give, so finishing IS the
+          // right answer. The round moves on by itself.
+          window.setTimeout(() => onSchreibFertig(), 420);
+        },
+      });
+      tracer = t;
+      box.appendChild(t.el);
+      break;
+    }
     case 'wort': {
       // The picture and the spoken word are two channels for the same
       // thing, and both are here on purpose: the sound can be off, and
@@ -1059,6 +1126,36 @@ function frameScale(): number {
   // third of the screen width, and it must be an INTEGER scale.
   const w = window.innerWidth;
   return Math.max(2, Math.min(8, Math.floor((w * 0.42) / 67)));
+}
+
+/**
+ * A written word is finished.
+ *
+ * Writing has no wrong answer to give: the child either completed the
+ * strokes or is still going. So there is no branch here, only the
+ * reward — which is also why the writing houses can never end a round
+ * with fewer stars than questions.
+ */
+function onSchreibFertig(): void {
+  if (!round || round.busy) return;
+  const q = round.qs[round.i];
+  round.busy = true;
+  round.right++;
+  state.recordFact(q.fact, true);
+  audio.chimeRight();
+  audio.sparkle(4);
+  if (tracer) {
+    const r = tracer.el.getBoundingClientRect();
+    fx.burst('stern', r.left + r.width / 2, r.top + r.height / 2,
+      { n: 16, speed: 190, up: 0.7, life: 0.9 });
+  }
+  window.setTimeout(() => {
+    if (!round) return;
+    round.i++;
+    round.busy = false;
+    if (round.i >= round.qs.length) finishRound();
+    else drawQuestion();
+  }, 900);
 }
 
 function onAnswer(idx: number, btn: HTMLButtonElement, stageQ: HTMLElement, answers: HTMLElement): void {
@@ -1155,6 +1252,8 @@ function finishRound(): void {
   audio.chimeRound();
   sayOneOf(['say.wellDone1', 'say.wellDone2', 'say.wellDone3']);
 
+  tracer?.destroy();
+  tracer = null;
   clear();
   fx.clear();
   fx.rain(window.innerWidth, perfect ? 46 : 26);
