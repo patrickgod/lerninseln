@@ -183,15 +183,53 @@ function scale(src, from, factor) {
   return out;
 }
 
+/**
+ * Area average, for the sizes that are not integer multiples of 64.
+ *
+ * iOS draws a home-screen icon at 152 on an iPad, 167 on an iPad Pro
+ * and 180 on an iPhone. None divides 64, and nearest neighbour at a
+ * fractional factor gives some source pixels three output pixels and
+ * others two — a visible stagger along every straight edge, and this
+ * icon is nothing but straight edges. Scaling up to the exact 512 first
+ * and box-filtering down means each output pixel averages a whole
+ * block, which is roughly what Safari would do anyway, done once here
+ * where it can be looked at.
+ */
+function box(src, from, to) {
+  const out = new Uint8ClampedArray(to * to * 4);
+  const f = from / to;
+  for (let y = 0; y < to; y++) {
+    const y0 = Math.floor(y * f), y1 = Math.max(y0 + 1, Math.floor((y + 1) * f));
+    for (let x = 0; x < to; x++) {
+      const x0 = Math.floor(x * f), x1 = Math.max(x0 + 1, Math.floor((x + 1) * f));
+      let r = 0, g = 0, b = 0, n = 0;
+      for (let sy = y0; sy < y1; sy++) {
+        for (let sx = x0; sx < x1; sx++) {
+          const si = (sy * from + sx) * 4;
+          r += src[si]; g += src[si + 1]; b += src[si + 2]; n++;
+        }
+      }
+      const di = (y * to + x) * 4;
+      out[di] = r / n; out[di + 1] = g / n; out[di + 2] = b / n; out[di + 3] = 255;
+    }
+  }
+  return out;
+}
+
 mkdirSync('public/icons', { recursive: true });
+
+const master = scale(buf, N, 8);                    // 512, exact
 for (const [size, factor] of [[192, 3], [512, 8]]) {
-  const s = size / factor;
-  if (s !== N) {
+  if (size / factor !== N) {
     // 192 = 64*3 and 512 = 64*8, both exact. Nearest-neighbour only
     // stays crisp at integer factors, so this asserts rather than
     // quietly producing a blurry icon.
     throw new Error(`icon size ${size} is not an integer multiple of ${N}`);
   }
   writeFileSync(`public/icons/icon-${size}.png`, png(size, size, scale(buf, N, factor)));
+  console.log(`  public/icons/icon-${size}.png`);
+}
+for (const size of [180, 167, 152, 120, 64, 32]) {
+  writeFileSync(`public/icons/icon-${size}.png`, png(size, size, box(master, 512, size)));
   console.log(`  public/icons/icon-${size}.png`);
 }

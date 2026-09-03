@@ -22,6 +22,7 @@ import { chromium, devices } from 'playwright';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
+import { inflateSync } from 'node:zlib';
 
 const PORT = 8398;
 const MIME = {
@@ -523,6 +524,86 @@ await page.waitForTimeout(900);
 check('the app loads with the network disabled',
   await page.locator('.island-card').count() === 3);
 await ctx.setOffline(false);
+
+// ---------------------------------------------------------------- icons
+
+// The home-screen icon is the only part of the app a child sees before
+// the app is running, and it is the one part no screenshot of the game
+// ever shows. So it gets checked here rather than trusted.
+//
+// Three things go wrong with an apple-touch-icon and all three are
+// silent: the file is missing (iOS falls back to a screenshot of the
+// page, which for this game is a black rectangle), the `sizes` attribute
+// disagrees with the actual PNG (Safari picks it and then rescales, so
+// the pixel art smudges), and the PNG has transparency (iOS composites
+// it onto black rather than honouring it).
+
+{
+  const html = await (await fetch(BASE + 'index.html')).text();
+  const manifest = await (await fetch(BASE + 'manifest.webmanifest')).json();
+
+  const refs = [];
+  for (const m of html.matchAll(/<link[^>]*rel="(apple-touch-icon|icon)"[^>]*>/g)) {
+    const href = /href="([^"]+)"/.exec(m[0])?.[1];
+    const sizes = /sizes="(\d+)x\1"/.exec(m[0])?.[1];
+    if (href) refs.push({ href, want: sizes ? Number(sizes) : null, from: m[1] });
+  }
+  for (const i of manifest.icons) {
+    refs.push({ href: i.src, want: Number(i.sizes.split('x')[0]), from: 'manifest' });
+  }
+
+  check('the page and manifest reference home-screen icons', refs.length >= 6,
+    `${refs.length} references`);
+  check('an apple-touch-icon is offered at 180, the size iOS draws',
+    refs.some((r) => r.from === 'apple-touch-icon' && r.want === 180));
+
+  const bad = [];
+  const notOpaque = [];
+  for (const r of refs) {
+    const res = await fetch(BASE + r.href);
+    if (!res.ok) { bad.push(`${r.href} is ${res.status}`); continue; }
+    const png = Buffer.from(await res.arrayBuffer());
+    const w = png.readUInt32BE(16), h = png.readUInt32BE(20);
+    if (w !== h) bad.push(`${r.href} is ${w}x${h}, not square`);
+    else if (r.want !== null && w !== r.want) bad.push(`${r.href} declares ${r.want} and is ${w}`);
+
+    // Every pixel opaque. Worth decoding for: a transparent icon looks
+    // correct in every preview and turns into a black square on a home
+    // screen, which is exactly the kind of bug that only shows up on
+    // the device, three days later, in someone else's hands.
+    const idat = [];
+    for (let o = 8; o + 8 <= png.length;) {
+      const len = png.readUInt32BE(o), type = png.toString('ascii', o + 4, o + 8);
+      if (type === 'IDAT') idat.push(png.subarray(o + 8, o + 8 + len));
+      o += 12 + len;
+    }
+    const raw = inflateSync(Buffer.concat(idat));
+    const stride = w * 4;
+    const line = Buffer.alloc(stride);
+    const prev = Buffer.alloc(stride);
+    let opaque = true;
+    for (let y = 0; y < h && opaque; y++) {
+      const f = raw[y * (stride + 1)];
+      raw.copy(line, 0, y * (stride + 1) + 1, y * (stride + 1) + 1 + stride);
+      for (let i = 0; i < stride; i++) {
+        const a = i >= 4 ? line[i - 4] : 0, b = prev[i], c = i >= 4 ? prev[i - 4] : 0;
+        if (f === 1) line[i] = (line[i] + a) & 255;
+        else if (f === 2) line[i] = (line[i] + b) & 255;
+        else if (f === 3) line[i] = (line[i] + ((a + b) >> 1)) & 255;
+        else if (f === 4) {
+          const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+          line[i] = (line[i] + (pa <= pb && pa <= pc ? a : pb <= pc ? b : c)) & 255;
+        }
+      }
+      for (let i = 3; i < stride; i += 4) if (line[i] !== 255) { opaque = false; break; }
+      line.copy(prev);
+    }
+    if (!opaque) notOpaque.push(r.href);
+  }
+  check('every icon exists and is the size it says it is', bad.length === 0, bad.join('; '));
+  check('every icon is fully opaque, so iOS has no transparency to blacken',
+    notOpaque.length === 0, notOpaque.join(', '));
+}
 
 // ------------------------------------------------------------ no noise
 
