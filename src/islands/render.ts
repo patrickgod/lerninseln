@@ -397,8 +397,14 @@ export const NAH = 2;
  * was the suite: six checks that tap the middle of the screen to open a
  * round stopped finding a house there.
  */
-export function mitte(islandId: string): { x: number; y: number } {
-  const h = housesOn(islandId);
+export function mitte(islandId: string, sterne = Infinity): { x: number; y: number } {
+  // The houses that are OPEN, not all of them. A plot that arrives in
+  // three weeks should not drag the camera off the house a child can
+  // play today — and on a fresh save that means arriving looking
+  // straight at the Haus der verliebten Zahlen, which is the point.
+  const alle = housesOn(islandId);
+  const offen = alle.filter((hh) => hh.stars <= sterne);
+  const h = offen.length ? offen : alle;
   if (h.length) {
     let sx = 0, sy = 0;
     for (const hh of h) {

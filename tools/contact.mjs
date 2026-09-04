@@ -401,5 +401,66 @@ items.forEach(([name, make], i) => {
 `);
 }
 
+if (doIt('hausaufgaben')) {
+  await sheet('hausaufgaben', `
+import { wuerfel, stange } from '../src/games/wuerfel.js';
+import { fahrzeug, pfeil, FAHRZEUGE } from '../src/games/fahrzeuge.js';
+
+// The pictures out of the real homework, at the size a child will see
+// them. The vehicles have ONE job — to point — so they are drawn facing
+// both ways, side by side, and if a pair is hard to tell apart at a
+// glance the sprite is wrong.
+const S = 4;
+const c = document.createElement('canvas');
+c.width = 1180;
+c.height = 980;
+document.body.appendChild(c);
+const ctx = c.getContext('2d')!;
+ctx.imageSmoothingEnabled = false;
+ctx.fillStyle = '#f8f0dc';
+ctx.fillRect(0, 0, c.width, c.height);
+ctx.fillStyle = '#241d2b';
+ctx.font = 'bold 18px sans-serif';
+ctx.textAlign = 'left';
+
+const put = (px: any, x: number, y: number, s = S) => {
+  const cv = px.toCanvas();
+  ctx.drawImage(cv, x, y, cv.width * s, cv.height * s);
+};
+
+ctx.fillText('Würfelbilder 0..6', 20, 30);
+for (let n = 0; n <= 6; n++) put(wuerfel(n), 20 + n * 132, 44, 4);
+
+ctx.fillText('Steckwürfelstangen — immer 5, jede Zerlegung', 20, 210);
+for (let t = 0; t <= 5; t++) put(stange(5, t), 20, 226 + t * 42, 2);
+
+ctx.fillText('immer 6, und eine leere Stange', 460, 210);
+for (let t = 0; t <= 6; t++) put(stange(6, t), 460, 226 + t * 42, 2);
+put(stange(5, -1), 460, 226 + 7 * 42, 2);
+
+ctx.fillText('Fahrzeuge: links | rechts — muss auf einen Blick zeigen', 20, 520);
+FAHRZEUGE.forEach((f, i) => {
+  const x = 20 + (i % 3) * 380;
+  const y = 540 + ((i / 3) | 0) * 190;
+  // The colour of an answer card, because that is what they sit on.
+  ctx.fillStyle = '#f8f0dc';
+  ctx.fillRect(x, y, 350, 120);
+  ctx.strokeStyle = '#241d2b';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(x, y, 350, 120);
+  ctx.fillStyle = '#241d2b';
+  put(fahrzeug(f, false), x + 4, y + 6, 4);
+  put(fahrzeug(f, true), x + 180, y + 6, 4);
+  ctx.fillText(f, x + 6, y + 138);
+});
+
+ctx.fillText('Pfeile', 20, 930);
+put(pfeil(false), 90, 900, 3);
+put(pfeil(true), 230, 900, 3);
+
+(window as any).ready = true;
+`);
+}
+
 await browser.close();
 rmSync('.contact', { recursive: true, force: true });

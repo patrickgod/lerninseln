@@ -53,6 +53,14 @@ const DE = {
 
   // --------------------------------------------------------- houses
   'house.verliebteZahlen': 'Das Haus der verliebten Zahlen',
+  'house.wuerfelbilder': 'Das Haus der Würfelbilder',
+  'house.wuerfelbilder.sub': 'Punkte sehen, ohne zu zählen',
+  'house.steckwuerfel': 'Das Haus der Steckwürfel',
+  'house.steckwuerfel.sub': 'Eine Stange in zwei Teile zerlegen',
+  'house.zahlenhaus': 'Das Zahlenhaus',
+  'house.zahlenhaus.sub': 'Ergänze die fehlende Zahl',
+  'house.richtungen': 'Das Haus der Richtungen',
+  'house.richtungen.sub': 'Links oder rechts — ganz ohne Zahlen',
   'house.zahlenreihe': 'Das Haus der Nachbarzahlen',
   'house.rechenmeister': 'Das Haus der Rechenmeister',
   'house.zwillinge': 'Das Haus der Zwillinge',
@@ -120,6 +128,25 @@ const DE = {
   'say.zahlenreiheErst':
     'Willkommen im Haus der Nachbarzahlen! Hier steht eine Reihe von Zahlen, und eine fehlt. Findest du sie?',
   'say.zahlenreihe': 'Die Nachbarzahlen! Welche Zahl fehlt?',
+
+  // The four houses that came out of the homework folder. The
+  // 'Erst' line is the full explanation, said the first time a house is
+  // opened; the short one is every time after that, because explaining
+  // the rules again to a child who has just learned them talks down to
+  // them.
+  'say.wuerfelbilderErst':
+    'Willkommen im Haus der Würfelbilder. Schau dir das Würfelbild an und tippe auf die richtige Zahl. Du musst nicht zählen — die Punkte machen ein Muster, und das kannst du sehen.',
+  'say.wuerfelbilder': 'Die Würfelbilder! Wie viele Punkte sind das?',
+  'say.steckwuerfelErst':
+    'Willkommen im Haus der Steckwürfel. Eine Stange ist in zwei Teile zerlegt. Die roten Würfel siehst du schon. Wie viele blaue fehlen noch?',
+  'say.steckwuerfel': 'Die Steckwürfel! Wie viele blaue Würfel fehlen?',
+  'say.zahlenhausErst':
+    'Willkommen im Zahlenhaus. Oben auf dem Dach steht, wie viel jedes Stockwerk zusammen ergibt. In einem Stockwerk fehlt eine Zahl. Welche ist es?',
+  'say.zahlenhaus': 'Das Zahlenhaus! Welche Zahl fehlt in dem Stockwerk?',
+  'say.richtungenErst':
+    'Willkommen im Haus der Richtungen. Hier fahren Autos, Züge und Raketen. Schau genau hin: fährt es nach links oder nach rechts?',
+  'say.richtungen': 'Die Richtungen! Wohin fährt es?',
+  'say.wohin': 'Fährt es nach links oder nach rechts?',
 
   'say.rechenmeisterErst':
     'Willkommen im Haus der Rechenmeister! Rechne in Ruhe, und tippe dann auf das Ergebnis.',

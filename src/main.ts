@@ -15,6 +15,8 @@ import * as audio from './core/audio.js';
 import * as fx from './core/fx.js';
 import { iconCanvas } from './core/icons.js';
 import { tenFrameCanvas } from './core/tenframe.js';
+import { wuerfelCanvas, stangeCanvas } from './games/wuerfel.js';
+import { fahrzeugCanvas, pfeilCanvas, type Fahrzeug } from './games/fahrzeuge.js';
 import {
   ISLANDS, GRID, island, unlockedHouses, housesOn, buildable,
   type IslandDef, type HouseDef,
@@ -763,7 +765,7 @@ function openIsland(id: string): void {
   // is.
   uebersicht = false;
   schwung = { x: 0, y: 0 };
-  cam = render.mitte(id);
+  cam = render.mitte(id, state.get().stars);
   resize();
   drawIslandUi();
   // On the first island ever opened she explains what it is and what the
@@ -1232,6 +1234,12 @@ function drawQuestion(): void {
       // whole point of this island.
       b.appendChild(formCanvas(label.slice(5) as Form, shapeScale()));
       b.setAttribute('aria-label', label.slice(5));
+    } else if (label.startsWith('wuerfel:')) {
+      b.appendChild(wuerfelCanvas(Number(label.slice(8)), Math.max(2, shapeScale() - 1)));
+      b.setAttribute('aria-label', label.slice(8));
+    } else if (label.startsWith('pfeil:')) {
+      b.appendChild(pfeilCanvas(label.slice(6) === 'rechts', Math.max(2, shapeScale())));
+      b.setAttribute('aria-label', label.slice(6));
     } else {
       b.textContent = label;
     }
@@ -1322,6 +1330,68 @@ function promptView(p: Prompt, q: Question): HTMLElement {
       box.appendChild(row);
       break;
     }
+    case 'stange': {
+      // The bar, and under it the two boxes the worksheet has: the part
+      // that is coloured, and an empty one. The empty box is the
+      // question, and it is a picture of the question rather than a
+      // sentence about it.
+      const bar = el('div', 'stange');
+      // How long the bar is, written down. The suite has to know what
+      // the picture says in order to check that the cards agree with it,
+      // and counting cubes out of a canvas is not a test, it is a second
+      // implementation with its own bugs.
+      bar.dataset.ganz = String(p.ganz);
+      bar.dataset.teil = String(p.teil);
+      bar.appendChild(stangeCanvas(p.ganz, p.teil, barScale(p.ganz), p.gefuellt));
+      box.appendChild(bar);
+      const teile = el('div', 'teile');
+      const a = el('div', 'teil rot', String(p.teil));
+      const b = el('div', `teil blau${p.gefuellt ? '' : ' luecke'}`,
+        p.gefuellt ? String(p.ganz - p.teil) : '?');
+      teile.append(a, b);
+      box.appendChild(teile);
+      break;
+    }
+    case 'zahlenhaus': {
+      const haus = el('div', 'zahlenhaus');
+      const dach = el('div', 'dach');
+      dach.appendChild(iconCanvas('stern', 0));   // replaced below
+      dach.replaceChildren(el('span', undefined, String(p.dach)));
+      haus.appendChild(dach);
+      const koerper = el('div', 'stockwerke');
+      for (const [links, rechts] of p.zeilen) {
+        const zeile = el('div', 'stockwerk');
+        zeile.appendChild(el('span', undefined, String(links)));
+        zeile.appendChild(el('span', rechts === null ? 'luecke' : undefined,
+          rechts === null ? '?' : String(rechts)));
+        koerper.appendChild(zeile);
+      }
+      haus.appendChild(koerper);
+      box.appendChild(haus);
+      break;
+    }
+    case 'wuerfel': {
+      box.appendChild(wuerfelCanvas(p.augen, Math.max(6, shapeScale() + 3)));
+      break;
+    }
+    case 'wuerfelpaar': {
+      // A numeral, and the empty die that wants it. The child is being
+      // asked to go the other way: from the number to the shape.
+      box.appendChild(el('div', 'numeral', String(p.ganz)));
+      break;
+    }
+    case 'richtung': {
+      const v = el('div', 'fahrzeug');
+      v.appendChild(fahrzeugCanvas(p.art as Fahrzeug, p.rechts, Math.max(6, shapeScale() + 3)));
+      box.appendChild(v);
+      // Spoken, and only spoken: this house is about a word the child
+      // cannot read, so the word is never on the screen.
+      const speak = el('button', 'speak', '\u25B6');
+      tap(speak, () => sayLine('say.wohin'));
+      box.appendChild(speak);
+      setTimeout(() => sayLine('say.wohin'), 240);
+      break;
+    }
     case 'schreiben': {
       // The word, split at the join, so the child SEES the two
       // syllables that are about to become one word.
@@ -1400,6 +1470,19 @@ function counterShape(): 'perle' | 'herz' {
 }
 
 /** A shape is 34px at 1x and should nearly fill its card. */
+/**
+ * How big a Steckwuerfelstange may be drawn.
+ *
+ * A bar of ten is ten times as wide as a bar of one, and the scale that
+ * fits a five runs a ten off both sides of an iPad. Worked out from the
+ * viewport rather than fixed, and capped, because a bar of four at 6x is
+ * a wall of bricks.
+ */
+function barScale(ganz: number): number {
+  const platz = Math.min(window.innerWidth * 0.86, 900);
+  return Math.max(2, Math.min(5, Math.floor(platz / (ganz * 16 + 2))));
+}
+
 function shapeScale(): number {
   return Math.max(2, Math.min(6, Math.floor((window.innerHeight * 0.13) / 34)));
 }
@@ -1613,6 +1696,17 @@ function finishRound(): void {
       arriving = arrived[0].id;
       arrivingUntil = performance.now() + 2400;
       for (const h of arrived) state.markSeen(h.id);
+      // Look at it. On an island that fits the screen this did nothing;
+      // on one that is bigger than the screen, a house can arrive in a
+      // corner the child is not looking at, and the biggest thing that
+      // happens in this app happens off-camera.
+      uebersicht = false;
+      schwung = { x: 0, y: 0 };
+      cam = {
+        x: (arrived[0].x - arrived[0].y) * 16,
+        y: (arrived[0].x + arrived[0].y) * 8,
+      };
+      blickSetzen();
       drawIslandUi();
       toast(t('island.newHouse'));
       // A house arriving is the biggest thing that happens in this app,

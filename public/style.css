@@ -951,3 +951,92 @@ a.dl:active { transform: translateY(4px); box-shadow: 0 0 0 var(--ink); }
   0%, 100% { transform: translateX(0); }
   50%      { transform: translateX(5px); }
 }
+
+/* ------------------------------------- the houses out of the homework */
+
+/* The Steckwuerfelstange, and under it the two boxes the worksheet has.
+   The empty one IS the question: a picture of what is being asked, not
+   a sentence about it. */
+.stange canvas { image-rendering: pixelated; display: block; }
+
+.teile {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.teil {
+  min-width: 68px;
+  padding: 6px 14px;
+  border: 4px solid var(--ink);
+  border-radius: 14px;
+  font-size: clamp(30px, 5vw, 46px);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.teil.rot { background: #e35f5c; }
+.teil.blau { background: #8fb0d1; }
+.teil.luecke { background: var(--plaster-dim); color: #3f5c85; }
+
+/* The Zahlenhaus: a roof with the whole in it, and rows of two under.
+   Drawn as boxes rather than as pixels because the numbers are the
+   content and a numeral has to be crisp at any size. */
+.zahlenhaus {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* A pitched roof, because this is a house and the app is about houses.
+   Two clipped layers: ink behind, terracotta four pixels inside it,
+   which is how you outline a shape that a border cannot follow. */
+.zahlenhaus .dach {
+  position: relative;
+  display: grid;
+  place-items: end center;
+  width: 100%;
+  min-width: 220px;
+  padding: 30px 0 8px;
+  background: var(--ink);
+  clip-path: polygon(50% 0, 100% 56%, 100% 100%, 0 100%, 0 56%);
+  color: var(--plaster);
+  font-size: clamp(30px, 4.6vw, 46px);
+  font-weight: 800;
+}
+
+.zahlenhaus .dach::before {
+  content: '';
+  position: absolute;
+  inset: 5px 4px 0;
+  background: #b5573f;
+  clip-path: polygon(50% 0, 100% 56%, 100% 100%, 0 100%, 0 56%);
+}
+
+.zahlenhaus .dach span { position: relative; }
+
+.zahlenhaus .stockwerke {
+  border: 4px solid var(--ink);
+  border-radius: 0 0 10px 10px;
+  overflow: hidden;
+  background: var(--plaster);
+}
+
+.zahlenhaus .stockwerk {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.zahlenhaus .stockwerk + .stockwerk { border-top: 3px solid var(--ink); }
+
+.zahlenhaus .stockwerk span {
+  padding: 4px 26px;
+  font-size: clamp(26px, 4vw, 40px);
+  font-weight: 800;
+  color: var(--ink);
+  text-align: center;
+}
+.zahlenhaus .stockwerk span:first-child { border-right: 3px solid var(--ink); }
+.zahlenhaus .stockwerk .luecke { background: #eddfc0; color: #3f5c85; }
+
+.fahrzeug canvas { image-rendering: pixelated; display: block; margin: 0 auto; }

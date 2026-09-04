@@ -140,6 +140,40 @@ export const HOUSES: HouseDef[] = [
     roof: 'terracotta',
     game: 'verliebte-zahlen',
   },
+  // Straight out of the homework folder. Dice come first because they
+  // are the easiest thing in the box — a child who has just met the app
+  // should meet something they can already do — and the cube bars come
+  // next because five and six come apart long before ten does.
+  {
+    id: 'wuerfelbilder',
+    island: 'mathe',
+    nameKey: 'house.wuerfelbilder',
+    sayKey: 'say.wuerfelbilder',
+    stars: 4,
+    x: 12, y: 4,
+    roof: 'thatch',
+    game: 'wuerfelbilder',
+  },
+  {
+    id: 'steckwuerfel',
+    island: 'mathe',
+    nameKey: 'house.steckwuerfel',
+    sayKey: 'say.steckwuerfel',
+    stars: 8,
+    x: 11, y: 10,
+    roof: 'slate',
+    game: 'steckwuerfel',
+  },
+  {
+    id: 'zahlenhaus',
+    island: 'mathe',
+    nameKey: 'house.zahlenhaus',
+    sayKey: 'say.zahlenhaus',
+    stars: 25,
+    x: 5, y: 12,
+    roof: 'terracotta',
+    game: 'zahlenhaus',
+  },
   {
     id: 'zahlenreihe',
     island: 'mathe',
@@ -251,6 +285,16 @@ export const HOUSES: HouseDef[] = [
     game: 'formen',
   },
   {
+    id: 'richtungen',
+    island: 'entdecker',
+    nameKey: 'house.richtungen',
+    sayKey: 'say.richtungen',
+    stars: 15,
+    x: 5, y: 10,
+    roof: 'thatch',
+    game: 'richtungen',
+  },
+  {
     id: 'muster',
     island: 'entdecker',
     nameKey: 'house.muster',
@@ -279,7 +323,12 @@ export const HOUSES: HouseDef[] = [
   // the middle rather than scattered to the four coasts — a child
   // arrives among them and builds outward — but they are far enough
   // apart that finding one is a small journey.
-  const streuung = 2.7;
+  // 2.0, not 2.7. Four houses at 2.7 were a comfortable village; seven
+  // of them were spread across more than a screenful, so two were off
+  // the edge when the island opened and a child had to go looking for a
+  // house they did not know existed. At 2.0 every house on every island
+  // is on screen at once when you arrive.
+  const streuung = 2.0;
   void ca;
   for (const h of HOUSES) {
     h.x = Math.round((h.x - ca) * streuung + c);

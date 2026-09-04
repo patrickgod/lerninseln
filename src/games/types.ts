@@ -22,6 +22,30 @@ export type Prompt =
   /** A row of shapes with the last one missing. */
   | { kind: 'muster'; reihe: string[] }
   /**
+   * A Steckwuerfelstange: `ganz` cubes, the first `teil` in one colour.
+   *
+   * Out of the real homework, and the reason it is not just another
+   * ten-frame: the frame says "five and five", the bar says "this long,
+   * split here". A child who only ever sees one picture of a number has
+   * learned the picture.
+   */
+  | { kind: 'stange'; ganz: number; teil: number; gefuellt: boolean }
+  /**
+   * A Zahlenhaus: a roof number and rows of two, one of them gapped.
+   *
+   * The rows around the gap are already filled in, which is the point —
+   * the house shows the whole systematic list, and a child who spots
+   * that one side counts down while the other counts up has found
+   * something better than the answer.
+   */
+  | { kind: 'zahlenhaus'; dach: number; zeilen: [number, number | null][] }
+  /** A dice face. Recognised, never counted. */
+  | { kind: 'wuerfel'; augen: number }
+  /** Two dice that must add to `ganz`, one of them still blank. */
+  | { kind: 'wuerfelpaar'; ganz: number; augen: number }
+  /** One vehicle, and which way is it going. */
+  | { kind: 'richtung'; art: string; rechts: boolean }
+  /**
    * Write this, with a finger.
    *
    * The only prompt with no answer cards at all: the answer IS the
@@ -39,9 +63,9 @@ export interface Question {
   /**
    * The tappable cards.
    *
-   * A plain string is written on the card. A string beginning `form:`
-   * is DRAWN on it instead — which is how the two houses on the Insel
-   * der Entdecker ask a question with no words on screen at all.
+   * A plain string is written on the card. Four prefixes are DRAWN on
+   * it instead — `form:`, `wuerfel:`, `fahrzeug:` and `pfeil:` — which
+   * is how a house asks a question with no words on screen at all.
    */
   choices: string[];
   /** Index into `choices`. */

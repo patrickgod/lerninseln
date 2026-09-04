@@ -159,12 +159,27 @@ await page.locator('.island-card').first().tap();
 await page.waitForTimeout(800);
 await measureButtons('island');
 
-// The first house is at the middle of the maths island, so a tap at the
-// centre of the canvas should open a round. This is deliberately a
-// touchscreen tap on the CANVAS, because the houses are not DOM.
-const box = await page.locator('#stage').boundingBox();
-await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2 + 10);
-await page.waitForTimeout(800);
+// Open a house by tapping the HOUSE, wherever it happens to be.
+//
+// This used to tap the middle of the canvas, on the reasoning that the
+// first house sits at the middle of the island. That stopped being true
+// twice — once when the camera started following a moving view, and
+// again when three more houses arrived and moved the centre of the
+// village — and both times six checks went red on a build where
+// everything worked.
+//
+// The name plate is positioned under the house every frame, so it is
+// where the house is. The tap is still a touchscreen tap on the CANVAS,
+// aimed just above the plate, because the houses are not DOM.
+async function tippeHaus(name) {
+  const plate = page.locator('.house-label', { hasText: name }).first();
+  const pb = await plate.boundingBox();
+  if (!pb) return false;
+  await page.touchscreen.tap(pb.x + pb.width / 2, pb.y - 24);
+  await page.waitForTimeout(800);
+  return true;
+}
+await tippeHaus('verliebten Zahlen');
 check('tapping a house opens a round', await page.locator('.answers button').count() >= 3);
 await measureButtons('round');
 
@@ -250,9 +265,7 @@ check('progress survives a reload', after === stars, `${stars} -> ${after}`);
 
 await page.locator('.island-card').first().tap();
 await page.waitForTimeout(800);
-const box2 = await page.locator('#stage').boundingBox();
-await page.touchscreen.tap(box2.x + box2.width / 2, box2.y + box2.height / 2 + 10);
-await page.waitForTimeout(800);
+await tippeHaus('verliebten Zahlen');
 const asked2 = await playRound(false);
 check('a round survives being answered at random',
   await page.locator('.sheet').count() > 0, `${asked2} answers given`);
@@ -561,6 +574,189 @@ await ctx.setOffline(false);
   const eng = platz.filter(([, n]) => n < 100);
   check('a new island is empty, and has room for at least 100 things',
     eng.length === 0, platz.map(([id, n]) => `${id}=${n}`).join(' '));
+}
+
+// ------------------------------------------- the houses from the homework
+
+// Four houses came out of a folder of Patrick's son's actual homework,
+// and each of them has a way of being wrong that a screenshot cannot
+// show: a bar whose two halves do not add up, a number house whose rows
+// do not make the roof, a die whose pips are not the canonical shape, an
+// arrow card that answers the wrong way round.
+//
+// So each one is played for real, and what is checked is the ARITHMETIC
+// on the screen rather than that something appeared.
+
+{
+  await page.goto(BASE);
+  await page.evaluate(() => {
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+      v: 1, stars: 60, candy: 0, placed: [], strength: {}, sound: false, voice: false,
+      seen: ['shop:init', 'luma:say.lumaHallo', 'luma:say.lumaInsel',
+        'luma:say.lumaHaus', 'luma:say.lumaBauen'],
+    }));
+  });
+  await page.reload();
+  await page.waitForTimeout(700);
+
+  // ---- Steckwürfel: the bar, the two boxes, and the cards must agree.
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(800);
+  check('the Haus der Steckwürfel is on the island',
+    await tippeHaus('Steckwürfel'));
+
+  // Play it properly: read what the picture says, work out the answer
+  // the same way a child would, tap that card, and require the app to
+  // agree by moving the round on. Anything else is testing the test.
+  let stimmig = 0, geprueft = 0;
+  for (let i = 0; i < 6; i++) {
+    if (await page.locator('.answers button').count() === 0) break;
+    const bar = await page.evaluate(() => {
+      const s = document.querySelector('.stange');
+      return s ? { ganz: Number(s.dataset.ganz), teil: Number(s.dataset.teil) } : null;
+    });
+    const rot = Number((await page.locator('.teil.rot').innerText()).trim());
+    const cards = (await page.locator('.answers button').allInnerTexts())
+      .map((c) => Number(c.trim()));
+    geprueft++;
+    const soll = bar.ganz - bar.teil;
+    const k = cards.indexOf(soll);
+    const vorher = await page.locator('.pip.done').count();
+    if (rot === bar.teil && k >= 0) {
+      await page.locator('.answers button').nth(k).tap();
+      await page.waitForTimeout(1900);
+      if (await page.locator('.pip.done').count() > vorher) stimmig++;
+    }
+    await page.waitForTimeout(400);
+  }
+  check('the red box, the bar and the right card all agree, six times over',
+    geprueft >= 5 && stimmig === geprueft, `${stimmig} of ${geprueft}`);
+}
+
+{
+  // ---- Zahlenhaus: every row must make the roof, and the gap must be
+  // the one the cards answer.
+  await page.goto(BASE);
+  await page.evaluate(() => {
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+      v: 1, stars: 60, candy: 0, placed: [], strength: {}, sound: false, voice: false,
+      seen: ['shop:init', 'luma:say.lumaHallo', 'luma:say.lumaInsel',
+        'luma:say.lumaHaus', 'luma:say.lumaBauen'],
+    }));
+  });
+  await page.reload();
+  await page.waitForTimeout(700);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(800);
+  check('the Zahlenhaus is on the island', await tippeHaus('Zahlenhaus'));
+
+  const dach = Number((await page.locator('.zahlenhaus .dach').innerText()).trim());
+  const zeilen = await page.evaluate(() => Array.from(
+    document.querySelectorAll('.zahlenhaus .stockwerk'),
+    (z) => Array.from(z.querySelectorAll('span'), (t) => t.textContent.trim())));
+  const gefuellt = zeilen.filter(([, b]) => b !== '?');
+  check('every filled row of the Zahlenhaus adds up to the roof',
+    gefuellt.length > 0 && gefuellt.every(([a, b]) => Number(a) + Number(b) === dach),
+    `roof ${dach}, rows ${zeilen.map((z) => z.join('+')).join(' ')}`);
+  check('and exactly one row has the gap',
+    zeilen.filter(([, b]) => b === '?').length === 1);
+  const luecke = zeilen.find(([, b]) => b === '?');
+  const cards = (await page.locator('.answers button').allInnerTexts()).map((c) => Number(c.trim()));
+  check('and the answer is among the cards',
+    cards.includes(dach - Number(luecke[0])),
+    `wants ${dach - Number(luecke[0])}, offered ${cards.join(' ')}`);
+
+  // And the app has to AGREE that it is the answer. The check above
+  // only reads the screen, and a scoring bug leaves the screen looking
+  // perfectly right — an off-by-one in what counts as correct passed it
+  // without a murmur.
+  let richtig = 0, runden = 0;
+  for (let i = 0; i < 6; i++) {
+    if (await page.locator('.answers button').count() === 0) break;
+    const d = Number((await page.locator('.zahlenhaus .dach').innerText()).trim());
+    const zs = await page.evaluate(() => Array.from(
+      document.querySelectorAll('.zahlenhaus .stockwerk'),
+      (z) => Array.from(z.querySelectorAll('span'), (t) => t.textContent.trim())));
+    const g = zs.find(([, b]) => b === '?');
+    const ks = (await page.locator('.answers button').allInnerTexts()).map((c) => Number(c.trim()));
+    const k = ks.indexOf(d - Number(g[0]));
+    runden++;
+    const vorher = await page.locator('.pip.done').count();
+    if (k >= 0) {
+      await page.locator('.answers button').nth(k).tap();
+      await page.waitForTimeout(1900);
+      if (await page.locator('.pip.done').count() > vorher) richtig++;
+    }
+    await page.waitForTimeout(400);
+  }
+  check('and answering every row correctly is scored as correct',
+    runden >= 5 && richtig === runden, `${richtig} of ${runden}`);
+}
+
+{
+  // ---- Richtungen: the two cards are drawn arrows and nothing on the
+  // screen is a word. That is the whole promise of this island.
+  await page.goto(BASE);
+  await page.evaluate(() => {
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+      v: 1, stars: 60, candy: 0, placed: [], strength: {}, sound: false, voice: false,
+      seen: ['shop:init', 'luma:say.lumaHallo', 'luma:say.lumaInsel',
+        'luma:say.lumaHaus', 'luma:say.lumaBauen'],
+    }));
+  });
+  await page.reload();
+  await page.waitForTimeout(700);
+  await page.locator('.island-card').nth(2).tap();
+  await page.waitForTimeout(800);
+  check('the Haus der Richtungen is on the Insel der Entdecker',
+    await tippeHaus('Richtungen'));
+
+  const karten = await page.locator('.answers button').count();
+  check('it offers exactly two cards, and both are drawings', karten === 2
+    && await page.locator('.answers button canvas').count() === 2);
+  const text = (await page.locator('.answers button').allInnerTexts()).join('').trim();
+  check('with not one word written on them', text.length === 0, `found "${text}"`);
+  const fahrzeug = await page.locator('.fahrzeug canvas').count();
+  check('and a vehicle to look at', fahrzeug === 1);
+
+  // Both arrows must be reachable and the round must survive either.
+  await page.locator('.answers button').first().tap();
+  await page.waitForTimeout(2200);
+  check('and answering it moves the round on',
+    await page.locator('.pip.done').count() >= 1);
+}
+
+{
+  // ---- Würfelbilder: both directions, and the pips must be canonical.
+  await page.goto(BASE);
+  await page.evaluate(() => {
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+      v: 1, stars: 60, candy: 0, placed: [], strength: {}, sound: false, voice: false,
+      seen: ['shop:init', 'luma:say.lumaHallo', 'luma:say.lumaInsel',
+        'luma:say.lumaHaus', 'luma:say.lumaBauen'],
+    }));
+  });
+  await page.reload();
+  await page.waitForTimeout(700);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(800);
+  check('the Haus der Würfelbilder is on the island',
+    await tippeHaus('Würfelbilder'));
+
+  // Over ten questions it must ask BOTH ways round — a die to read, and
+  // a numeral to find the die for. One direction only would be half a
+  // house and would look completely normal.
+  let gelesen = 0, gemalt = 0;
+  for (let i = 0; i < 10; i++) {
+    const cards = await page.locator('.answers button').count();
+    if (cards === 0) break;
+    const gezeichnet = await page.locator('.answers button canvas').count();
+    if (gezeichnet > 0) gemalt++; else gelesen++;
+    await page.locator('.answers button').first().tap();
+    await page.waitForTimeout(2400);
+  }
+  check('the Würfelbilder house asks both ways round',
+    gelesen > 0 && gemalt > 0, `${gelesen} to read, ${gemalt} to find`);
 }
 
 // ---------------------------------------------------------------- Luma

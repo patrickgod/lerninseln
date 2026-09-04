@@ -151,6 +151,36 @@ if (want('luma')) {
   await shot('luma-insel');
 }
 
+// The four houses that came out of the homework folder.
+for (const [name, haus, sterne] of [
+  ['wuerfelbilder', 1, 30], ['steckwuerfel', 2, 30],
+  ['zahlenhaus', 3, 60], ['richtungen', 0, 60],
+]) {
+  if (!want(name)) continue;
+  await page.goto(`http://localhost:${PORT}/`);
+  await page.evaluate((st) => {
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+      // Luma has already said her piece: these shots are about the
+      // houses, and her box covers the bottom third of the screen.
+      v: 1, stars: st, candy: 0, placed: [], strength: {},
+      seen: ['shop:init', 'luma:say.lumaHallo', 'luma:say.lumaInsel',
+        'luma:say.lumaHaus', 'luma:say.lumaBauen'],
+      sound: true, voice: false,
+    }));
+  }, sterne);
+  await page.reload();
+  await page.waitForTimeout(800);
+  await page.locator('.island-card').nth(name === 'richtungen' ? 2 : 0).tap();
+  await page.waitForTimeout(900);
+  const ziel = await page.locator('.house-label', { hasText: new RegExp(name === 'wuerfelbilder' ? 'Würfelbilder' : name === 'steckwuerfel' ? 'Steckwürfel' : name === 'zahlenhaus' ? 'Zahlenhaus' : 'Richtungen') }).first();
+  const bb = await ziel.boundingBox();
+  if (bb) {
+    await page.touchscreen.tap(bb.x + bb.width / 2, bb.y - 26);
+    await page.waitForTimeout(1200);
+  }
+  await shot(name);
+}
+
 if (want('shop')) await shot('shop');
 
 // The sweet corner, and the two animals that cannot be bought.

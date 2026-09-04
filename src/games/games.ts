@@ -462,6 +462,25 @@ export function answerOf(gameId: string, q: Question): number {
 
 function expectedAnswer(gameId: string, q: Question): string {
   switch (gameId) {
+    case 'steckwuerfel': {
+      const p = q.prompt as { kind: 'stange'; ganz: number; teil: number };
+      return String(p.ganz - p.teil);
+    }
+    case 'zahlenhaus': {
+      const p = q.prompt as { kind: 'zahlenhaus'; dach: number; zeilen: [number, number | null][] };
+      const luecke = p.zeilen.find(([, b]) => b === null)!;
+      return String(p.dach - luecke[0]);
+    }
+    case 'wuerfelbilder': {
+      // Two directions, two kinds of card: a numeral when the child is
+      // reading a face, and a drawn die when they are picking one.
+      const n = Number(q.fact.split(':')[2]);
+      return q.choices.includes(String(n)) ? String(n) : `wuerfel:${n}`;
+    }
+    case 'richtungen': {
+      const p = q.prompt as { kind: 'richtung'; rechts: boolean };
+      return p.rechts ? 'pfeil:rechts' : 'pfeil:links';
+    }
     case 'verliebte-zahlen':
       return String(10 - Number(q.fact.slice(3)));
     case 'zahlenreihe':
@@ -501,8 +520,194 @@ function expectedAnswer(gameId: string, q: Question): string {
   }
 }
 
+// ------------------------------------------- Haus der Steckwürfel
+//
+// "Zerlegen in zwei Teile. Nimm 2 Buntstifte. Male jede
+// Steckwürfelstange mit 2 Farben an. Immer 5." — straight off the
+// worksheet, and it is the step BEFORE the verliebten Zahlen rather
+// than a repeat of them: five and six come apart long before ten does.
+//
+// The fact is the pair, not the number, so the scheduler remembers that
+// this child is shaky on 6 = 4 and 2 and solid on 5 = 4 and 1.
+
+export const steckwuerfel: Game = {
+  id: 'steckwuerfel',
+  facts: () => {
+    const out: string[] = [];
+    for (let ganz = 4; ganz <= 10; ganz++) {
+      for (let teil = 0; teil <= ganz; teil++) out.push(`sw:${ganz}:${teil}`);
+    }
+    return out;
+  },
+  next(pick) {
+    const fact = pick(this.facts());
+    const [, g, t] = fact.split(':');
+    const ganz = Number(g), teil = Number(t);
+    const rest = ganz - teil;
+    return {
+      fact,
+      // The rest of the bar is EMPTY, not blue. Colouring it in hands
+      // the answer over: the question stops being "how many are left"
+      // and becomes "count the blue ones", which is a different and much
+      // smaller thing to know.
+      prompt: { kind: 'stange', ganz, teil, gefuellt: false },
+      choices: numberChoices(rest, 3, strengthOf(fact) === 0 ? 3 : 4, ganz),
+      correct: -1,
+      // And the correction is the bar finishing itself: the blue half
+      // fills in and the two numbers are simply there. Nothing says
+      // wrong.
+      showOnMiss: { kind: 'stange', ganz, teil, gefuellt: true },
+    } as Question;
+  },
+};
+
+// ------------------------------------------------ Das Zahlenhaus
+//
+// "Ergänze die verliebten Zahlenhäuser." A roof with a number in it and
+// rows of two underneath, one of them with a gap.
+//
+// The rows around the gap are already filled in, and that is the whole
+// design: the house is the systematic list, and a child who notices
+// that the left column counts down while the right counts up has found
+// the structure rather than the answer.
+
+export const zahlenhaus: Game = {
+  id: 'zahlenhaus',
+  facts: () => {
+    const out: string[] = [];
+    for (const dach of [5, 6, 7, 8, 9, 10]) {
+      for (let a = 0; a <= dach; a++) out.push(`zh:${dach}:${a}`);
+    }
+    return out;
+  },
+  next(pick) {
+    const fact = pick(this.facts());
+    const [, d, l] = fact.split(':');
+    const dach = Number(d), links = Number(l);
+
+    // Four rows, the gapped one somewhere in the middle where it can be
+    // read off its neighbours. A gap at the very top or bottom is a
+    // different and harder question and this house is not that house.
+    const start = Math.max(0, Math.min(dach - 3, links - 1 - Math.floor(Math.random() * 2)));
+    const zeilen: [number, number | null][] = [];
+    for (let i = 0; i < 4 && start + i <= dach; i++) {
+      const a = start + i;
+      zeilen.push([a, a === links ? null : dach - a]);
+    }
+    if (!zeilen.some(([, b]) => b === null)) {
+      zeilen[Math.min(1, zeilen.length - 1)][1] = null;
+    }
+    const luecke = zeilen.find(([, b]) => b === null)!;
+    const antwort = dach - luecke[0];
+    return {
+      fact,
+      prompt: { kind: 'zahlenhaus', dach, zeilen },
+      choices: numberChoices(antwort, 3, 4, dach),
+      correct: -1,
+      showOnMiss: {
+        kind: 'zahlenhaus',
+        dach,
+        zeilen: zeilen.map(([a, b]) => [a, b === null ? dach - a : b] as [number, number | null]),
+      },
+    } as Question;
+  },
+};
+
+// --------------------------------------------- Haus der Würfelbilder
+//
+// "Würfelbilder — Zählen und Malen bis 6."
+//
+// The one house in the box whose whole point is NOT counting. A dice
+// face is a shape that means a number, and a child who counts the pips
+// on a five has not learned the five. It is also the easiest thing here
+// and it arrives early, because a child who has just met the app should
+// meet something they can already do.
+//
+// Two directions, because the worksheet has both: read a face, and pick
+// the face for a number. The second one needs drawn cards, which is the
+// same mechanism the shapes house uses.
+
+export const wuerfelbilder: Game = {
+  id: 'wuerfelbilder',
+  facts: () => {
+    const out: string[] = [];
+    for (let n = 1; n <= 6; n++) { out.push(`wb:lesen:${n}`); out.push(`wb:malen:${n}`); }
+    return out;
+  },
+  next(pick) {
+    const fact = pick(this.facts());
+    const [, art, n] = fact.split(':');
+    const augen = Number(n);
+    if (art === 'lesen') {
+      return {
+        fact,
+        prompt: { kind: 'wuerfel', augen },
+        choices: numberChoices(augen, 1, 4, 6),
+        correct: -1,
+      } as Question;
+    }
+    // The other way round: a numeral, and four dice to choose from.
+    const falsch: number[] = [];
+    for (let i = 1; i <= 6; i++) if (i !== augen) falsch.push(i);
+    for (let i = falsch.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [falsch[i], falsch[j]] = [falsch[j], falsch[i]];
+    }
+    const alle = [augen, ...falsch.slice(0, 3)];
+    for (let i = alle.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [alle[i], alle[j]] = [alle[j], alle[i]];
+    }
+    return {
+      fact,
+      prompt: { kind: 'wuerfelpaar', ganz: augen, augen: -1 },
+      choices: alle.map((v) => `wuerfel:${v}`),
+      correct: -1,
+    } as Question;
+  },
+};
+
+// ------------------------------------------- Haus der Richtungen
+//
+// "Kreise alle Fahrzeuge, die nach rechts fahren, rot ein."
+//
+// Left and right, and no counting at all. It lives on the Insel der
+// Entdecker with the shapes and the patterns, and it is there for a
+// reason that matters more than the topic: every house on the number
+// island rewards the same kind of thinking, and a child who is slow
+// with sums can be quick at this and earn exactly the same stars.
+//
+// The question is spoken and the cards are drawn. Not one word on the
+// screen, in a house about a word — links, rechts — that the child
+// cannot read yet.
+
+const FAHRZEUG_ARTEN = ['auto', 'bus', 'zug', 'rakete', 'boot', 'flugzeug'];
+
+export const richtungen: Game = {
+  id: 'richtungen',
+  facts: () => FAHRZEUG_ARTEN.flatMap((a) => [`ri:${a}:r`, `ri:${a}:l`]),
+  next(pick) {
+    const fact = pick(this.facts());
+    const [, art, seite] = fact.split(':');
+    const rechts = seite === 'r';
+    return {
+      fact,
+      prompt: { kind: 'richtung', art, rechts },
+      // Two cards, both arrows, and they are the same two every time on
+      // purpose: the child is learning which way is which, so the cards
+      // must not move about.
+      choices: ['pfeil:links', 'pfeil:rechts'],
+      correct: -1,
+    } as Question;
+  },
+};
+
 export const GAMES: Record<string, Game> = {
   'verliebte-zahlen': verliebteZahlen,
+  'steckwuerfel': steckwuerfel,
+  'zahlenhaus': zahlenhaus,
+  'wuerfelbilder': wuerfelbilder,
+  'richtungen': richtungen,
   'zahlenreihe': zahlenreihe,
   'rechenmeister': rechenmeister,
   'zwillinge': zwillinge,
