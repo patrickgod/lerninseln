@@ -137,6 +137,20 @@ if (want('karte')) {
   await shot('uebersicht');
 }
 
+// Luma, saying hello. The very first thing that ever happens.
+if (want('luma')) {
+  await page.goto(`http://localhost:${PORT}/`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForTimeout(1100);
+  await shot('luma-hallo');
+  await page.locator('.luma').first().tap();
+  await page.waitForTimeout(400);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(1200);
+  await shot('luma-insel');
+}
+
 if (want('shop')) await shot('shop');
 
 // The sweet corner, and the two animals that cannot be bought.

@@ -8,6 +8,7 @@
 // The order of things in here follows the order a child meets them.
 
 import { t } from './core/i18n.js';
+import * as luma from './ui/luma.js';
 import { P, shade } from './core/palette.js';
 import * as state from './core/state.js';
 import * as audio from './core/audio.js';
@@ -393,6 +394,7 @@ function placeLabels(): void {
 // ------------------------------------------------------------- helpers
 
 function clear(): void {
+  luma.abbrechen();
   ui.replaceChildren();
   houseLabels.clear();
   thumbs.length = 0;
@@ -728,7 +730,9 @@ function showPicker(): void {
   ui.appendChild(corner);
 
   // The one line a child who cannot read needs.
-  sayLine('say.pickIsland');
+  // The first time the app is ever opened she introduces herself; every
+  // time after that it is the plain line, with no face and no waiting.
+  if (!luma.einmal('say.lumaHallo')) sayLine('say.pickIsland');
 }
 
 /** A small live rendering of an island, so the choice is a picture. */
@@ -762,7 +766,12 @@ function openIsland(id: string): void {
   cam = render.mitte(id);
   resize();
   drawIslandUi();
-  sayLine(island(id).sayKey);
+  // On the first island ever opened she explains what it is and what the
+  // houses are for, in that order, the second line following the first
+  // when she leaves. After that, the island's own line.
+  if (!luma.einmal('say.lumaInsel', () => { luma.einmal('say.lumaHaus'); })) {
+    sayLine(island(id).sayKey);
+  }
 }
 
 function drawIslandUi(): void {
@@ -788,7 +797,7 @@ function drawIslandUi(): void {
   } else {
     bar.appendChild(button(t('island.build'), () => {
       building = true; holding = null; drawIslandUi();
-      sayLine('say.build');
+      if (!luma.einmal('say.lumaBauen')) sayLine('say.build');
     }));
   }
   ui.appendChild(bar);
@@ -1597,7 +1606,7 @@ function finishRound(): void {
         audio.sparkle(6);
         fx.burst('herz', window.innerWidth / 2, window.innerHeight / 2,
           { n: 18, speed: 190, up: 0.8, life: 1.1 });
-        if (!arrived.length) sayLine('say.newFriend');
+        if (!arrived.length) luma.zeige('say.newFriend');
       }, 320);
     }
     if (arrived.length) {
@@ -1619,7 +1628,7 @@ function finishRound(): void {
         fx.burst('staub', hx, hy, { n: 20, speed: 150, up: 0.15, gravity: 160, life: 0.7 });
         fx.burst('funke', hx, hy - 40, { n: 14, speed: 130, up: 0.8, life: 0.9 });
         audio.sparkle(5);
-        sayLine('say.newHouse');
+        luma.zeige('say.newHouse');
       }, 260);
     } else {
       drawIslandUi();

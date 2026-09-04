@@ -182,6 +182,25 @@ const DE = {
   'say.newFriend': 'Zwei Zahlen haben sich gefunden! Sie wohnen jetzt auf deiner Insel.',
   'say.build': 'Jetzt kannst du deine Insel schöner machen.',
 
+  // ------------------------------------------------------------- Luma
+  //
+  // Five lines, and four of them are said ONCE, ever. She came over from
+  // Funkelwelt with her own rule attached and it is the important part
+  // of her: a fairy who explains the same thing every time you open the
+  // island is a fairy a child learns to sit through.
+  //
+  // Two sentences each, never three. They are spoken, and the same words
+  // are printed for whoever is sitting next to the child — nothing she
+  // says is ever the only way to know something.
+  'say.lumaHallo':
+    'Hallo! Ich bin Luma. Ich passe auf deine Inseln auf.',
+  'say.lumaInsel':
+    'Das hier ist deine eigene Insel. Sie gehört ganz allein dir.',
+  'say.lumaHaus':
+    'In den Häusern warten Aufgaben auf dich. Dafür bekommst du Sterne und Bonbons.',
+  'say.lumaBauen':
+    'Für Bonbons kannst du bauen. Such dir etwas aus und tippe auf die Wiese.',
+
   // ------------------------------------------------------- currencies
   'cur.stars': 'Sterne',
   'cur.candy': 'Bonbons',

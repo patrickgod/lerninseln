@@ -862,3 +862,92 @@ a.dl:active { transform: translateY(4px); box-shadow: 0 0 0 var(--ink); }
   align-items: flex-end;
 }
 .lieferung-reihe canvas { image-rendering: pixelated; }
+
+/* ------------------------------------------------------------ Luma */
+
+/* Lifted from Funkelwelt, where the box was designed. */
+.luma {
+  position: absolute;
+  left: calc(var(--safe-l) + 14px);
+  right: calc(var(--safe-r) + 14px);
+  /* Above the bottom bar, not on top of it. She covered the Bauen
+     button and the map button, and a character who is standing in front
+     of the controls is a character a child taps THROUGH. */
+  bottom: calc(var(--safe-b) + 104px);
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  text-align: left;
+  animation: luma-rein 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* The base button rules press down on tap. She is not a control being
+   pressed, she is a person being listened to. */
+.luma:active { transform: none; box-shadow: none; background: none; }
+
+.luma-bild { flex: 0 0 auto; display: block; }
+
+/* The coded fallback is pixel art and must not be smoothed. The painting
+   is a painting and must not be pixelated — it is the one image in this
+   game that is neither drawn in code nor on the closed palette, and
+   telling the browser to nearest-neighbour it would be the one way to
+   make that look like a mistake rather than a decision. */
+.luma-bild canvas { image-rendering: pixelated; display: block; }
+
+.luma-gemalt {
+  display: block;
+  width: clamp(96px, 17vh, 150px);
+  height: clamp(96px, 17vh, 150px);
+  border: 4px solid var(--ink);
+  border-radius: 20px;
+  box-shadow: 0 6px 0 var(--ink);
+  background: var(--ink);
+  object-fit: cover;
+}
+
+.luma-text {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  min-height: 96px;
+  position: relative;
+  padding: 16px 56px 16px 22px;
+  border: 4px solid var(--ink);
+  border-radius: 20px;
+  background: rgba(36, 29, 43, 0.94);
+  box-shadow: 0 6px 0 var(--ink);
+  color: var(--plaster);
+  font-size: clamp(19px, 2.5vw, 28px);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+/* A chevron, pointing on. It nudges sideways rather than blinking,
+   because a blinking thing on a screen a child is reading is a thing
+   they look at instead of the words. */
+.luma-weiter {
+  position: absolute;
+  right: 18px;
+  bottom: 50%;
+  transform: translateY(50%);
+  color: var(--glow);
+  font-size: 34px;
+  line-height: 1;
+  opacity: 0.85;
+  animation: luma-tippen 1400ms ease-in-out infinite;
+}
+
+@keyframes luma-rein {
+  from { transform: translateY(40px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes luma-tippen {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(5px); }
+}

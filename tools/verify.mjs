@@ -563,6 +563,63 @@ await ctx.setOffline(false);
     eng.length === 0, platz.map(([id, n]) => `${id}=${n}`).join(' '));
 }
 
+// ---------------------------------------------------------------- Luma
+
+// She came over from Funkelwelt with one rule attached, and the rule is
+// the important part of her: a fairy who explains the same thing every
+// time you open the island is a fairy a child learns to sit through.
+// The rule is invisible in a screenshot and it is the whole design, so
+// it is a check.
+
+{
+  await page.goto(BASE);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForTimeout(1000);
+  check('Luma says hello the first time the app is ever opened',
+    await page.locator('.luma').count() === 1);
+  check('and her portrait is the painting, not a broken image',
+    await page.evaluate(() => {
+      const img = document.querySelector('.luma-gemalt');
+      return !!img && img.complete && img.naturalWidth > 0;
+    }));
+  // Her words are spoken. They are also PRINTED, for whoever is sitting
+  // next to the child — rule 14 cuts both ways, and text that is only
+  // decoration is text that can quietly go missing.
+  check('and what she says is written down as well as spoken',
+    (await page.locator('.luma-text').innerText()).trim().length > 12);
+
+  // She leaves on her own. A box a child has to dismiss to carry on is
+  // a toll gate.
+  await page.waitForTimeout(4200);
+  check('she goes away on her own', await page.locator('.luma').count() === 0);
+
+  await page.reload();
+  await page.waitForTimeout(1200);
+  check('and never says hello again', await page.locator('.luma').count() === 0);
+
+  // On the island she has two lines, in order, the second following the
+  // first when she leaves.
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(900);
+  const erste = (await page.locator('.luma-text').innerText()).trim();
+  check('she explains the island the first time it is opened', erste.length > 12);
+  await page.locator('.luma').first().tap();
+  await page.waitForTimeout(500);
+  const zweite = (await page.locator('.luma-text').innerText()).trim();
+  check('and then what the houses are for, as a second line',
+    zweite.length > 12 && zweite !== erste);
+
+  await page.locator('.luma').first().tap();
+  await page.waitForTimeout(400);
+  await page.locator('button', { hasText: 'Zurück' }).first().tap();
+  await page.waitForTimeout(400);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(1000);
+  check('and she does not explain it again on the second visit',
+    await page.locator('.luma').count() === 0);
+}
+
 // ------------------------------------------------------------ the camera
 
 // The islands are bigger than the screen now, so there is a camera, and

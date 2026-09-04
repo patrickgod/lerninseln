@@ -55,12 +55,26 @@ function apiKey() {
  * renders the same sentence in each and the choice is made by ear.
  */
 const CANDIDATES = {
+  // The one that ships.
   matilda: 'XrExE9yKIg1WjnnlVkGX',
+  // The first round, chosen by reading labels.
   sarah: 'EXAVITQu4vr4xnSDxMaL',
   lily: 'pFZP5JQG7iQjIQuC4Bku',
   alice: 'Xb7hH8MSUJpSbSDYk0k2',
   dorothy: 'ThT5KcBeYPX3keUQqHPh',
   charlotte: 'XB0fDUnXU5powFXDhCwa',
+  // The second round. Patrick, after Luma arrived: "vllt finden wir
+  // auch ueber elevenlabs eine freundlichere stimme?" — so these are
+  // the younger and warmer end of the library rather than the
+  // narrator end, which is what the first six mostly were.
+  freya: 'jsCqWAovK2LkecY7zXl4',
+  gigi: 'jBpfuIE2acCO8z3wKNLl',
+  elli: 'MF3mGyEYCl7XYWbV9V6O',
+  serena: 'pMsXgVXv3BLzUgSXRplE',
+  grace: 'oWAxZDx7w5VEj9dCyTzz',
+  glinda: 'z9fAnlkpzviPz146aGWa',
+  nicole: 'piTKgcLEGmPE4e6mEKli',
+  rachel: '21m00Tcm4TlvDq8ikWAM',
 };
 
 /** The voice the app ships with. One constant; swapping it is a rerun. */
@@ -242,9 +256,14 @@ function shrink(path) {
 
 if (SAMPLES) {
   mkdirSync('audio_raw', { recursive: true });
-  const line = 'Willkommen im Haus der verliebten Zahlen. '
-    + 'Zwei Zahlen sind verliebt, wenn sie zusammen zehn ergeben. '
-    + 'Tippe auf die passende Zahl.';
+  // Luma's own lines, because she is who the voice is now. Judging a
+  // voice on an instruction is judging it on the wrong thing: most of
+  // what a child hears from her is a greeting and a bit of praise, and
+  // a voice can read an instruction well and sound like a teacher
+  // giving one.
+  const line = 'Hallo! Ich bin Luma. Ich passe auf deine Inseln auf. '
+    + 'Das hier ist deine eigene Insel, sie gehoert ganz allein dir. '
+    + 'Das hast du toll gemacht!';
   for (const [name, id] of Object.entries(CANDIDATES)) {
     const path = `audio_raw/sample-${name}.mp3`;
     process.stdout.write(`  ${name} … `);
