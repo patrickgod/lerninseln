@@ -11,21 +11,55 @@
 // Decorations, which the child places, are the part that moves.
 
 import { t } from '../core/i18n.js';
+import { deco } from './decor.js';
 
 /**
  * The island is a GRID x GRID field of tiles.
  *
- * Seventeen, not thirteen. The first prototype gave the child about
- * forty buildable tiles, which sounds like plenty and is not: houses
- * take four of them, the beach is not buildable, and a child who has
- * bought a dozen things has filled the place up. An island you cannot
- * keep decorating stops being yours and becomes a puzzle with a
- * solution.
+ * Twenty-three, and the number is a measurement rather than a taste.
  *
- * The camera fits the LAND rather than the grid, so a bigger island
- * costs a little zoom rather than a lot of empty sea.
+ * It went 13 -> 17 -> 23, because a child who has bought a dozen things
+ * fills the place up, and an island you cannot keep decorating stops
+ * being yours and becomes a puzzle with a solution.
+ *
+ * 23 is the LARGEST grid at which all three islands still fit an iPad
+ * at 2x. At 24 the Sprache island runs out of width, `fit` drops to 1,
+ * and every sprite in the game is silently half the size — which is far
+ * worse than a smaller island, and which nothing would have noticed.
+ * Measured on the real page at 1080x810, per island:
+ *
+ *   GRID   19  20  21  22  23  24
+ *   mathe   2   2   2   2   2   2
+ *   sprache 2   2   2   2   2   1     <- the ceiling
+ *   entdeck 2   2   2   2   2   2
+ *
+ * A first attempt at this put the ceiling at 19, from a model of `fit`
+ * written in a scratch script rather than from `fit` itself. The model
+ * was wrong by four whole grid steps. `tools/verify.mjs` now asks the
+ * running page, which cannot be wrong in that particular way, and it
+ * has been watched failing at 24.
+ *
+ * Bigger than 23 needs a camera that pans, which is a real feature and
+ * not a constant.
+ *
+ * Free tiles to build on, with the island empty:
+ *
+ *   GRID 17    65   (it also came with about thirty trees of its own)
+ *   GRID 23   165 / 170 / 183   measured by tools/verify.mjs
  */
-export const GRID = 17;
+export const GRID = 23;
+
+/**
+ * The grid the house positions below were authored on.
+ *
+ * The coastline is a radius function of angle that the tile grid only
+ * samples, so changing GRID changes the resolution of the coast and not
+ * its shape. House positions are plain tile coordinates and do NOT have
+ * that property, so they are scaled from the grid they were drawn on.
+ * Without this, growing the island moves every house towards the
+ * north-west corner and some of them into the sea.
+ */
+const AUTHORED_GRID = 17;
 
 export interface HouseDef {
   id: string;
@@ -225,6 +259,35 @@ export const HOUSES: HouseDef[] = [
   },
 ];
 
+// Authored on a 17x17 grid; see AUTHORED_GRID. Done once, here, rather
+// than at every read, so the rest of the file can go on treating h.x
+// and h.y as plain tile coordinates.
+{
+  const c = (GRID - 1) / 2;
+  const ca = (AUTHORED_GRID - 1) / 2;
+  // A fixed multiple of the AUTHORED offset rather than a multiple of
+  // the grid, so that growing the island does not fling the houses at
+  // the coast. The houses were packed for a smaller island and their
+  // name plates overlapped each other in the middle; on an island that
+  // now starts empty, four overlapping labels are the only thing on it.
+  // `land()` pulls land up under any house that ends over water, so
+  // spreading them is safe.
+  const streuung = 1.7;
+  void ca;
+  for (const h of HOUSES) {
+    h.x = Math.round((h.x - ca) * streuung + c);
+    h.y = Math.round((h.y - ca) * streuung + c);
+  }
+  // Two houses on one tile is a house you cannot open, and it would
+  // only show up on the island nobody looked at.
+  const seen = new Set<string>();
+  for (const h of HOUSES) {
+    const k = `${h.island}:${h.x},${h.y}`;
+    if (seen.has(k)) throw new Error(`two houses on ${k}`);
+    seen.add(k);
+  }
+}
+
 export function island(id: string): IslandDef {
   const found = ISLANDS.find((i) => i.id === id);
   if (!found) throw new Error(`unknown island ${id}`);
@@ -355,10 +418,19 @@ export function isSand(islandId: string, x: number, y: number): boolean {
   return land(islandId).sand[y * GRID + x];
 }
 
-/** A tile a decoration may be placed on: land, not sand, not a house. */
-export function buildable(islandId: string, x: number, y: number): boolean {
+/**
+ * A tile a decoration may be placed on: land, not a house, and not the
+ * beach unless the thing being placed belongs on a beach.
+ *
+ * The sand ring is between a quarter and a third of every island and
+ * nothing could ever go on it, which made it the largest unusable part
+ * of the place a child is meant to be filling. It is still not a lawn —
+ * a windmill on the beach would look wrong — but the sandcastle belongs
+ * there and nowhere else.
+ */
+export function buildable(islandId: string, x: number, y: number, decoId?: string): boolean {
   if (!isLand(islandId, x, y)) return false;
-  if (isSand(islandId, x, y)) return false;
+  if (isSand(islandId, x, y) && !(decoId && deco(decoId)?.sand)) return false;
   // Every house tile is off limits, including the ones that are still
   // only a marked-out plot — a cherry tree planted where the Haus der
   // Zwillinge is going to be would have to be bulldozed later, and

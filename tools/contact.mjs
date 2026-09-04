@@ -317,5 +317,89 @@ items.forEach(([name, make], i) => {
 `);
 }
 
+if (doIt('nasch')) {
+  await sheet('naschsprites', `
+import * as S from '../src/islands/sprites.js';
+import * as N from '../src/islands/nasch.js';
+import { P } from '../src/core/palette.js';
+
+// The sweet family, at the scale the island draws it, on the ground it
+// stands on, with a house behind for scale. Two seeds of each of the
+// random ones, because a generator that makes one good sprite and one
+// bad one is worse than one that always makes the same sprite.
+const SCALE = 4;
+const CELL_W = 150, CELL_H = 175, COLS = 5, LABEL = 26;
+
+const items: [string, () => S.Sprite][] = [
+  ['zuckerstange a', () => N.zuckerstange(3)],
+  ['zuckerstange b', () => N.zuckerstange(12)],
+  ['lolliblumen a', () => N.lolliblumen(5)],
+  ['lolliblumen b', () => N.lolliblumen(21)],
+  ['zuckerwatte a', () => N.zuckerwatte(7)],
+  ['zuckerwatte b', () => N.zuckerwatte(31)],
+  ['bonbonbusch a', () => N.bonbonbusch(9)],
+  ['bonbonbusch b', () => N.bonbonbusch(44)],
+  ['lebkuchenhaus', () => N.lebkuchenhaus()],
+  ['schokobrunnen', () => N.schokobrunnen()],
+  ['sandburg a', () => N.sandburg(4)],
+  ['sandburg b', () => N.sandburg(18)],
+  ['fahne a', () => N.fahne(6)],
+  ['fahne b', () => N.fahne(26)],
+  ['kaninchen a', () => N.kaninchen(2)],
+  ['kaninchen b', () => N.kaninchen(15)],
+  ['igel a', () => N.igel(8)],
+  ['igel b', () => N.igel(23)],
+  ['marshmallowbaum', () => S.cherryTree(7)],
+  ['haus (Massstab)', () => S.house('terracotta', 3, true)],
+];
+
+const rows = Math.ceil(items.length / COLS);
+const c = document.createElement('canvas');
+c.width = COLS * CELL_W + 16;
+c.height = rows * (CELL_H + LABEL) + 16;
+document.body.appendChild(c);
+const ctx = c.getContext('2d')!;
+ctx.imageSmoothingEnabled = false;
+
+ctx.fillStyle = '#3f6c3a';
+ctx.fillRect(0, 0, c.width, c.height);
+
+const ground = S.groundTile(P.grass, 3, 0);
+const house = S.house('slate', 9, false);
+
+items.forEach(([name, make], i) => {
+  const col = i % COLS, row = (i / COLS) | 0;
+  const cx = 8 + col * CELL_W + CELL_W / 2;
+  const baseY = 8 + row * (CELL_H + LABEL) + CELL_H - 34;
+
+  const g = ground.px.toCanvas();
+  ctx.drawImage(g,
+    Math.round(cx - ground.ax * SCALE), Math.round(baseY - ground.ay * SCALE),
+    g.width * SCALE, g.height * SCALE);
+
+  ctx.globalAlpha = 0.25;
+  const hc = house.px.toCanvas();
+  ctx.drawImage(hc,
+    Math.round(cx - house.ax * SCALE + 46), Math.round(baseY - house.ay * SCALE),
+    hc.width * SCALE, hc.height * SCALE);
+  ctx.globalAlpha = 1;
+
+  const s = make();
+  const sc = s.px.toCanvas();
+  ctx.drawImage(sc,
+    Math.round(cx - s.ax * SCALE), Math.round(baseY - s.ay * SCALE),
+    sc.width * SCALE, sc.height * SCALE);
+
+  ctx.fillStyle = '#f8f0dc';
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(name + '  ' + s.px.w + 'x' + s.px.h,
+    cx, 8 + row * (CELL_H + LABEL) + CELL_H + 14);
+});
+
+(window as any).ready = true;
+`);
+}
+
 await browser.close();
 rmSync('.contact', { recursive: true, force: true });

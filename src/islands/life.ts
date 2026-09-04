@@ -37,7 +37,7 @@ import type { Placed } from '../core/state.js';
 
 export interface Critter {
   /** Which sprite generator draws it. */
-  art: 'sheep' | 'hen' | 'duck' | 'cat' | 'fox';
+  art: 'sheep' | 'hen' | 'duck' | 'cat' | 'fox' | 'kaninchen' | 'igel';
   /** Float tile position. */
   x: number;
   y: number;
@@ -121,6 +121,27 @@ export function critters(islandId: string, time: number, placed: Placed[], trees
         for (let i = 0; i < 2; i++) {
           const s = potter(p.x, p.y, p.x * 13 + p.y * 5 + i * 97, time, 13 + i * 4, 0.75);
           out.push({ art: 'hen', x: s.x, y: s.y, seed: p.x * 41 + p.y + i });
+        }
+        break;
+      }
+      case 'pilze': {
+        // A hedgehog comes for the mushrooms. They are the cheapest
+        // thing in the shop, which is the point: the first animal a
+        // child gets for free should be the one that teaches them that
+        // buying things changes the island.
+        const s = potter(p.x, p.y + 0.2, p.x * 29 + p.y * 7, time, 17, 0.5);
+        out.push({ art: 'igel', x: s.x, y: s.y, seed: p.x * 53 + p.y });
+        break;
+      }
+      case 'lebkuchenhaus': {
+        // Two rabbits, come to nibble it. The gingerbread house is the
+        // most expensive thing on the island and takes about a
+        // fortnight to save for, so it had better do something when it
+        // arrives.
+        for (let i = 0; i < 2; i++) {
+          const s = potter(p.x + (i ? 0.5 : -0.5), p.y + 0.4,
+            p.x * 17 + p.y * 3 + i * 83, time, 20 + i * 6, 0.55);
+          out.push({ art: 'kaninchen', x: s.x, y: s.y, seed: p.x * 61 + p.y + i });
         }
         break;
       }

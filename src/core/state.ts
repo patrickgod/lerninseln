@@ -22,6 +22,7 @@
 // child holding the brush.
 
 import * as storage from './storage.js';
+import { DECOR } from '../islands/decor.js';
 
 export interface Placed {
   /** Decoration id, from `islands/decor.ts`. */
@@ -94,6 +95,7 @@ export function init(): Save {
   const text = storage.load();
   if (!text) {
     state = fresh();
+    ladenGrundstock();
     return state;
   }
   try {
@@ -121,7 +123,28 @@ export function init(): Save {
   } catch {
     state = fresh();
   }
+  ladenGrundstock();
   return state;
+}
+
+/**
+ * Everything the shop is ALREADY offering counts as seen.
+ *
+ * The "Neu" flash marks a thing that has just turned up. Without this,
+ * a brand-new save opens the shop and every single card says Neu — and
+ * a badge that is on everything is a decoration rather than a signal.
+ * Worse, the first island Patrick's son opens after an update would
+ * have thirty-five of them.
+ *
+ * So the moment a save is loaded, whatever is on the shelves now is
+ * ordinary. Anything that arrives after this is genuinely new, and it
+ * is the only thing that will ever wear the badge.
+ */
+function ladenGrundstock(): void {
+  if (state.seen.includes('shop:init')) return;
+  for (const d of DECOR) if (d.ab <= state.stars) state.seen.push(`shop:${d.id}`);
+  state.seen.push('shop:init');
+  flush();
 }
 
 export function get(): Save {

@@ -18,7 +18,7 @@ import {
   type IslandDef, type HouseDef,
 } from './islands/islands.js';
 import * as render from './islands/render.js';
-import { DECOR, deco } from './islands/decor.js';
+import { deco, sortiment, neuAb, GRUPPEN } from './islands/decor.js';
 import * as S from './islands/sprites.js';
 import * as D from './islands/deko.js';
 import { buildRound, rundenLaenge } from './games/games.js';
@@ -168,6 +168,23 @@ window.addEventListener('orientationchange', () => setTimeout(resize, 120));
 const perfOn = new URLSearchParams(location.search).get('perf') === '1';
 const perf: Record<string, number> = { draw: 0, labels: 0, fx: 0 };
 if (perfOn) (window as unknown as { __perf: typeof perf }).__perf = perf;
+
+/**
+ * The camera's integer zoom for a given island, behind the same flag.
+ *
+ * GRID is capped at 19 because that is the largest island on which all
+ * three coastlines still fit an iPad at 2x. At 20 the Sprache island
+ * needs more width than there is, `fit` drops to 1, and every sprite in
+ * the game is silently half the size — which nothing else here would
+ * notice, and which is much worse than a slightly smaller island. So
+ * the suite measures the real camera on the real page.
+ */
+if (perfOn) {
+  (window as unknown as { __zoom: (id: string) => number }).__zoom =
+    (id: string) => render.fit(window.innerWidth, window.innerHeight, id).scale;
+  (window as unknown as { __platz: (id: string) => number }).__platz =
+    (id: string) => render.freieFelder(id, state.get().stars);
+}
 
 function mark(key: string, since: number): void {
   if (!perfOn) return;
@@ -745,7 +762,7 @@ function onBuildTap(x: number, y: number): void {
   }
 
   if (!holding) return;
-  if (!buildable(currentIsland, x, y)) return;
+  if (!buildable(currentIsland, x, y, holding)) return;
   if (state.occupied(currentIsland, x, y)) return;
 
   const d = deco(holding);
@@ -774,27 +791,46 @@ function showShop(): void {
   sheet.appendChild(el('h2', undefined, t('shop.title')));
   sheet.appendChild(purse());
 
-  const grid = el('div', 'shop-grid');
-  for (const d of DECOR) {
-    const item = el('button', 'shop-item');
-    item.appendChild(decoThumb(d.art));
-    item.appendChild(el('div', 'label', t(d.nameKey)));
-    const price = el('div', 'price');
-    price.appendChild(iconCanvas('bonbon', 22));
-    price.appendChild(el('span', undefined, String(d.price)));
-    item.appendChild(price);
-    if (state.get().candy < d.price) item.disabled = true;
-    tap(item, () => {
-      if (state.get().candy < d.price) { toast(t('shop.tooExpensive')); return; }
-      audio.pop();
-      holding = d.id;
-      sheet.remove();
-      building = true;
-      drawIslandUi();
-    });
-    grid.appendChild(item);
+  // Only what has turned up so far. Never a locked card, never a
+  // padlock, never a condition a child who cannot read would have to
+  // read. See the long comment at the top of decor.ts.
+  const angebot = sortiment(state.get().stars);
+  const wrap = el('div', 'shop-wrap');
+
+  for (const g of GRUPPEN) {
+    const teil = angebot.filter((d) => d.group === g);
+    if (!teil.length) continue;
+    wrap.appendChild(el('h3', 'shop-gruppe', t(`gruppe.${g}`)));
+    const grid = el('div', 'shop-grid');
+    for (const d of teil) {
+      const item = el('button', 'shop-item');
+      item.appendChild(decoThumb(d.art));
+      item.appendChild(el('div', 'label', t(d.nameKey)));
+      const price = el('div', 'price');
+      price.appendChild(iconCanvas('bonbon', 22));
+      price.appendChild(el('span', undefined, String(d.price)));
+      item.appendChild(price);
+      // "Neu" until it has been looked at once. `hasSeen` is the same
+      // once-only marker the voice lines use.
+      if (!state.hasSeen(`shop:${d.id}`)) {
+        item.appendChild(el('div', 'neu', t('shop.neu')));
+        state.markSeen(`shop:${d.id}`);
+      }
+      if (state.get().candy < d.price) item.disabled = true;
+      tap(item, () => {
+        if (state.get().candy < d.price) { toast(t('shop.tooExpensive')); return; }
+        audio.pop();
+        holding = d.id;
+        sheet.remove();
+        building = true;
+        drawIslandUi();
+      });
+      grid.appendChild(item);
+    }
+    wrap.appendChild(grid);
   }
-  sheet.appendChild(grid);
+
+  sheet.appendChild(wrap);
   sheet.appendChild(button(t('shop.close'), () => sheet.remove()));
   ui.appendChild(sheet);
 }
@@ -1283,6 +1319,26 @@ function finishRound(): void {
   s2.append(iconCanvas('bonbon', 34), el('span', undefined, `+${candy}`));
   reward.append(s1, s2);
   sheet.appendChild(reward);
+
+  // Did the boat bring anything? This is the growing shop happening
+  // where the child can see it: the actual pictures of the actual new
+  // things, on the sheet where the reward already is.
+  //
+  // It is a delivery and not an unlock, and the difference is the whole
+  // design. Nothing was ever locked, so nothing has been opened; there
+  // was no condition, so none has been met. Things have simply turned
+  // up, the way things turn up on an island, and the shop is bigger
+  // than it was this morning.
+  const geliefert = neuAb(before, after);
+  if (geliefert.length) {
+    const box = el('div', 'lieferung');
+    box.appendChild(el('div', 'lieferung-text', t('shop.geliefert')));
+    const reihe = el('div', 'lieferung-reihe');
+    // Five at most. A row of nine thumbnails is an inventory screen.
+    for (const d of geliefert.slice(0, 5)) reihe.appendChild(decoThumb(d.art));
+    box.appendChild(reihe);
+    sheet.appendChild(box);
+  }
 
   const house = round.house;
   const row = el('div');

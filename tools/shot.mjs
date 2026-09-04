@@ -125,6 +125,66 @@ await page.locator('button', { hasText: 'Bauen' }).first().tap();
 await page.waitForTimeout(500);
 if (want('shop')) await shot('shop');
 
+// The sweet corner, and the two animals that cannot be bought.
+//
+// A hedgehog comes for the mushrooms and two rabbits come for the
+// gingerbread house, so this shot is also the check that they arrive at
+// all — they are a pure function of what is placed, and nothing else in
+// the suite would notice if that stopped being true.
+if (want('nasch')) {
+  await page.goto(`http://localhost:${PORT}/`);
+  await page.evaluate(() => {
+    const placed = [
+      ['lebkuchenhaus', 8, 7], ['schokobrunnen', 11, 8], ['zuckerwatte', 6, 8],
+      ['lolliblumen', 7, 10], ['bonbonbusch', 10, 11], ['zuckerstange', 12, 10],
+      ['zuckerstange', 12, 11], ['pilze', 9, 12], ['kirschbaum', 6, 11],
+      ['sandburg', 13, 13], ['fahne', 11, 6],
+    ].map(([d, x, y]) => ({ d, i: 'mathe', x, y }));
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+      v: 1, stars: 200, candy: 300, seen: [], placed, strength: {}, sound: true, voice: false,
+    }));
+  });
+  await page.reload();
+  await page.waitForTimeout(900);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(4200);
+  await shot('nasch');
+  await page.evaluate(() => {
+    const l = document.querySelector('.labels');
+    if (l) l.style.display = 'none';
+  });
+  await page.waitForTimeout(300);
+  await shot('nasch-nackt');
+}
+
+// The shop with everything in it. The default shop shot above is what a
+// child sees on the first evening — nine cards — and this is what it
+// grows into, which is the pair worth looking at side by side.
+if (want('shop-voll')) {
+  await page.goto(`http://localhost:${PORT}/`);
+  await page.evaluate(() => {
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+      v: 1, stars: 200, candy: 300, seen: [], placed: [], strength: {},
+      sound: true, voice: false,
+    }));
+  });
+  await page.reload();
+  await page.waitForTimeout(900);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(700);
+  await page.locator('button', { hasText: 'Bauen' }).first().tap();
+  await page.waitForTimeout(400);
+  await page.locator('button', { hasText: 'Bauen' }).first().tap();
+  await page.waitForTimeout(600);
+  await shot('shop-voll');
+  await page.evaluate(() => {
+    const w = document.querySelector('.shop-wrap');
+    if (w) w.scrollTop = w.scrollHeight;
+  });
+  await page.waitForTimeout(300);
+  await shot('shop-voll-unten');
+}
+
 // The language island, and the Anlaute house — the one that must work
 // with the sound switched off, so the picture is the thing to look at.
 // Clear the tester's 120 stars first, or BOTH language houses are

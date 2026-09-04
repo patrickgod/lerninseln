@@ -525,6 +525,102 @@ check('the app loads with the network disabled',
   await page.locator('.island-card').count() === 3);
 await ctx.setOffline(false);
 
+// ------------------------------------------------------------ the island
+
+// Two promises about the island, both of which would fail silently.
+//
+// The first is the SIZE. GRID is 19 because that is the largest island
+// on which all three coastlines still fit an iPad at 2x, and the margin
+// on the widest one is eight sprite pixels. A fourth island with a
+// wider seed, or a GRID of 20, drops the camera to 1x and halves every
+// sprite in the game — and nothing else in this suite would notice.
+//
+// The second is that a NEW island is EMPTY. It used to come with about
+// thirty tiles of wild wood, and one playtest said that a child handed
+// a decorated island is decorating somebody else\'s island. The only
+// thing a fresh save may show is the houses.
+
+{
+  await page.goto(`${BASE}?perf=1`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForTimeout(700);
+
+  const zooms = await page.evaluate(
+    () => ['mathe', 'sprache', 'entdecker'].map((id) => [id, window.__zoom(id)]));
+  const klein = zooms.filter(([, z]) => z < 2);
+  check('every island still draws at 2x or better on an iPad',
+    klein.length === 0,
+    zooms.map(([id, z]) => `${id}=${z}x`).join(' '));
+
+  // The room to build. One number that catches a shrinking grid, the
+  // wild wood coming back, and a change to what counts as buildable.
+  // It was 65 on a 17x17 island with its own wood on it.
+  const platz = await page.evaluate(
+    () => ['mathe', 'sprache', 'entdecker'].map((id) => [id, window.__platz(id)]));
+  const eng = platz.filter(([, n]) => n < 100);
+  check('a new island is empty, and has room for at least 100 things',
+    eng.length === 0, platz.map(([id, n]) => `${id}=${n}`).join(' '));
+}
+
+// -------------------------------------------------------------- the shop
+
+// The shop GROWS rather than locking. Three things have to hold, and
+// each of them is the difference between growing and locking:
+//
+//   * the first evening is a short list, not a wall of thirty-five;
+//   * every card shown is a card that can be bought — there is never a
+//     padlock, a condition, or a greyed-out thing a child cannot read
+//     the price of;
+//   * "Neu" marks an arrival and is therefore NOT on everything.
+
+{
+  await page.goto(BASE);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForTimeout(700);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(600);
+  await page.locator('button', { hasText: 'Bauen' }).first().tap();
+  await page.waitForTimeout(300);
+  await page.locator('button', { hasText: 'Bauen' }).first().tap();
+  await page.waitForTimeout(500);
+
+  const anfang = await page.locator('.shop-item').count();
+  check('the first evening is a short shop, not a wall',
+    anfang >= 5 && anfang <= 12, `${anfang} cards`);
+  const neuAnfang = await page.locator('.shop-item .neu').count();
+  check('and nothing in it is flagged as new, because nothing arrived yet',
+    neuAnfang === 0, `${neuAnfang} badges`);
+
+  // Now the same shop after a lot of rounds. Not a fresh save with 200
+  // stars — that is the migration path and it is already covered — but
+  // stars ADDED to the save that is open, which is what actually
+  // happens when a child plays.
+  await page.evaluate(() => {
+    const raw = JSON.parse(localStorage.getItem('lerninseln.save.v1') ?? '{}');
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify({ ...raw, stars: 200, candy: 400 }));
+  });
+  await page.reload();
+  await page.waitForTimeout(700);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(600);
+  await page.locator('button', { hasText: 'Bauen' }).first().tap();
+  await page.waitForTimeout(300);
+  await page.locator('button', { hasText: 'Bauen' }).first().tap();
+  await page.waitForTimeout(500);
+
+  const spaet = await page.locator('.shop-item').count();
+  check('and it has grown by the time there are 200 stars',
+    spaet > anfang * 2, `${anfang} -> ${spaet} cards`);
+  const gesperrt = await page.locator('.shop-item[disabled]').count();
+  check('nothing in the shop is locked, only unaffordable',
+    gesperrt === 0, `${gesperrt} disabled with 400 sweets`);
+  const neuSpaet = await page.locator('.shop-item .neu').count();
+  check('the things that arrived while playing are flagged, and only those',
+    neuSpaet === spaet - anfang, `${neuSpaet} badges for ${spaet - anfang} arrivals`);
+}
+
 // ---------------------------------------------------------------- icons
 
 // The home-screen icon is the only part of the app a child sees before

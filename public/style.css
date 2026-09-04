@@ -371,18 +371,36 @@ button:disabled { opacity: 0.45; }
   animation: pop 420ms ease both;
 }
 
-.shop-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-  gap: 14px;
+/* The shop scrolls as ONE column of families rather than as a single
+   grid, because a wall of thirty-five cards is as hard to choose from
+   as a blank page. Trees, then garden, then sweets, then animals, then
+   the village. */
+.shop-wrap {
   width: min(94vw, 900px);
-  max-height: 66vh;
+  max-height: 64vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 6px;
 }
 
+.shop-gruppe {
+  margin: 10px 4px 6px;
+  font-size: 20px;
+  color: #d6c4a0;
+  text-align: left;
+  letter-spacing: 0.02em;
+}
+.shop-gruppe:first-child { margin-top: 0; }
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 14px;
+  padding: 0 0 4px;
+}
+
 .shop-item {
+  position: relative;
   display: grid;
   /* A fixed picture box, then the label, then the price. Without the
      fixed row the cards size themselves to their sprite and the labels
@@ -804,3 +822,43 @@ a.dl:active { transform: translateY(4px); box-shadow: 0 0 0 var(--ink); }
   padding: 12px 26px;
   white-space: nowrap;
 }
+
+/* "Neu" on something that has just arrived. It is a flash, not a
+   status: `hasSeen` clears it the first time the shop is opened after
+   the thing turned up, so it can never become part of the furniture. */
+.shop-item .neu {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #e88aa8;
+  color: #241d2b;
+  font-size: 14px;
+  font-weight: 700;
+  border: 2px solid #241d2b;
+  transform: rotate(-8deg);
+}
+
+/* The delivery: what the boat brought, on the sheet at the end of a
+   round. Warm rather than loud — it is a nice surprise, not a level-up
+   banner, and it must never outshout the stars flying into the purse. */
+.lieferung {
+  margin: 10px 0 4px;
+  padding: 10px 18px 12px;
+  border-radius: 22px;
+  background: rgba(232, 180, 71, 0.14);
+  border: 2px solid rgba(232, 180, 71, 0.45);
+}
+.lieferung-text {
+  font-size: 19px;
+  color: #ffe08a;
+  margin-bottom: 6px;
+}
+.lieferung-reihe {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: flex-end;
+}
+.lieferung-reihe canvas { image-rendering: pixelated; }

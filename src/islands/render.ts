@@ -19,10 +19,12 @@
 //   rasteriser does not pay for mixed surfaces.
 
 import { P, shade, atNight } from '../core/palette.js';
-import { GRID, isLand, isSand, island, unlockedHouses, housesOn, type HouseDef } from './islands.js';
+import { GRID, isLand, isSand, island, buildable, unlockedHouses, housesOn, type HouseDef } from './islands.js';
 import * as S from './sprites.js';
 import * as D from './deko.js';
+import * as N from './nasch.js';
 import * as state from '../core/state.js';
+import type { Placed } from '../core/state.js';
 import { deco } from './decor.js';
 import * as life from './life.js';
 
@@ -136,6 +138,14 @@ function decoSprite(art: string, seed: number, frame = 0): Baked {
     case 'birdbox': return bake('d:box', () => D.birdBox());
     case 'campfire': return bake('d:fire', () => D.campfire());
     case 'windmill': return bake(`d:mill:${frame}`, () => D.windmill(frame));
+    case 'zuckerstange': return bake(`n:cane:${seed}`, () => N.zuckerstange(seed));
+    case 'lolliblumen': return bake(`n:lolli:${seed}`, () => N.lolliblumen(seed));
+    case 'zuckerwatte': return bake(`n:watte:${seed}`, () => N.zuckerwatte(seed));
+    case 'bonbonbusch': return bake(`n:bonbon:${seed}`, () => N.bonbonbusch(seed));
+    case 'lebkuchenhaus': return bake('n:lebkuchen', () => N.lebkuchenhaus());
+    case 'schokobrunnen': return bake('n:schoko', () => N.schokobrunnen());
+    case 'sandburg': return bake(`n:burg:${seed}`, () => N.sandburg(seed));
+    case 'fahne': return bake(`n:fahne:${seed}`, () => N.fahne(seed));
     default: break;
   }
   return bake(`d:${art}:${seed}`, () => {
@@ -152,6 +162,8 @@ function decoSprite(art: string, seed: number, frame = 0): Baked {
       case 'duck': return S.duck(seed);
       case 'cat': return S.cat(seed);
       case 'fox': return S.fox(seed);
+      case 'kaninchen': return N.kaninchen(seed);
+      case 'igel': return N.igel(seed);
       case 'lamp': return S.lamp();
       case 'bench': return S.bench();
       case 'well': return S.well();
@@ -196,33 +208,40 @@ function noise2(x: number, y: number): number {
 // ------------------------------------------------------------ scenery
 
 /**
- * The island's own trees, before the child has bought anything.
+ * The island's own trees. There are none, and that is the design.
  *
- * Deterministic from the island seed, so the wood is in the same place
- * every visit — and deliberately sparse near the middle, where the
- * houses and the child's own building go.
+ * There used to be a wood here — about thirty tiles of it per island,
+ * generated from the island seed, sparse in the middle and thickening
+ * towards the coast. It was pretty and it was wrong, and one playtest
+ * said so.
+ *
+ * A child handed a decorated island is decorating somebody else's
+ * island. His twelfth tree changes nothing he can see, because there
+ * were already thirty. Handed an empty one, the FIRST tree changes
+ * everything, and every tree after it is visibly his. That is the whole
+ * difference between decorating and making, and it costs a deletion.
+ *
+ * It also gives the wild trees' tiles back: about thirty per island,
+ * on top of the twenty-four the grid grew by.
+ *
+ * The function stays rather than the call sites changing, because the
+ * wood is still a real thing in the game — it is just made of the
+ * child's own trees now, and `zaehleBaeume` below is what finds it.
  */
-function scenery(islandId: string): { x: number; y: number; seed: number }[] {
-  const def = island(islandId);
-  let a = (def.seed * 2654435761) >>> 0;
-  const rn = (): number => {
-    a ^= a << 13; a >>>= 0;
-    a ^= a >>> 17;
-    a ^= a << 5; a >>>= 0;
-    return a / 4294967296;
-  };
-  const out: { x: number; y: number; seed: number }[] = [];
-  const c = (GRID - 1) / 2;
-  for (let y = 0; y < GRID; y++) {
-    for (let x = 0; x < GRID; x++) {
-      if (!isLand(islandId, x, y) || isSand(islandId, x, y)) continue;
-      const d = Math.sqrt((x - c) ** 2 + (y - c) ** 2) / c;
-      // Nothing in the middle third; the density rises towards the coast.
-      if (rn() > 0.10 + d * d * 0.72) continue;
-      out.push({ x, y, seed: (x * 73856093) ^ (y * 19349663) ^ def.seed });
-    }
-  }
-  return out;
+function scenery(_islandId: string): { x: number; y: number; seed: number }[] {
+  return [];
+}
+
+/**
+ * The child's own wood: every tree they have planted.
+ *
+ * This is what birds circle over and what the fox lives in. Making it
+ * the PLACED trees rather than the island's own is the better rule as
+ * well as the necessary one — three trees bring birds, and now they are
+ * three trees somebody chose to plant.
+ */
+function zaehleBaeume(placed: Placed[]): { x: number; y: number }[] {
+  return placed.filter((p) => deco(p.d)?.group === 'baum').map((p) => ({ x: p.x, y: p.y }));
 }
 
 const sceneryCache = new Map<string, { x: number; y: number; seed: number }[]>();
@@ -236,6 +255,30 @@ function sceneryOf(islandId: string): { x: number; y: number; seed: number }[] {
     life.setWood(islandId, s);
   }
   return s;
+}
+
+/**
+ * How many tiles are free to build on, right now.
+ *
+ * Exported for `tools/verify.mjs`, because "the island is big enough
+ * and starts empty" is the whole point of this change and it is not
+ * something a screenshot can count. It catches a shrinking grid, the
+ * wild wood coming back, and a change to what counts as buildable, all
+ * with one number.
+ */
+export function freieFelder(islandId: string, stars: number): number {
+  const placed = state.placedOn(islandId);
+  let n = 0;
+  for (let y = 0; y < GRID; y++) {
+    for (let x = 0; x < GRID; x++) {
+      if (!buildable(islandId, x, y)) continue;
+      if (placed.some((p) => p.x === x && p.y === y)) continue;
+      if (sceneryOf(islandId).some((t) => t.x === x && t.y === y)) continue;
+      n++;
+    }
+  }
+  void stars;
+  return n;
 }
 
 // ---------------------------------------------------------------- view
@@ -438,11 +481,17 @@ export function draw(
   const trees = sceneryOf(o.islandId);
   const treeKind = island(o.islandId).tree;
 
+  // The wood is the child's own trees, recomputed each frame because it
+  // changes the moment one is planted — and it is a filter over a list
+  // that is never more than a few dozen long.
+  const wald = zaehleBaeume(placed);
+  life.setWood(o.islandId, wald);
+
   const hits: HouseHit[] = [];
 
   // Everything that walks. A pure function of the clock and what has
   // been built, so it costs nothing to compute afresh every frame.
-  const alive = life.critters(o.islandId, o.time, placed, trees.length);
+  const alive = life.critters(o.islandId, o.time, placed, wald.length);
 
   // The Zahlenfreunde gather around the house they came out of. Only
   // on the island that house is on, obviously.

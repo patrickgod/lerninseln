@@ -46,6 +46,7 @@ const DE = {
 
   // -------------------------------------------------------- the shop
   'shop.title': 'Was möchtest du bauen?',
+  'shop.geliefert': 'Das Boot hat etwas Neues gebracht!',
   'shop.close': 'Fertig',
   'shop.tooExpensive': 'Dafür brauchst du noch mehr Bonbons',
   'shop.placeIt': 'Tippe auf einen freien Platz',
@@ -186,7 +187,11 @@ const DE = {
   'cur.candy': 'Bonbons',
 
   // ------------------------------------------------------- the things
-  'deco.kirschbaum': 'Kirschbaum',
+  // Not 'Kirschbaum'. Patrick's son looked at it and called it a
+  // Marshmallowbaum, and the name a child gives a thing is a better
+  // name than the one the adult had in mind. The id stays 'kirschbaum'
+  // so that every tree already planted survives the rename.
+  'deco.kirschbaum': 'Marshmallowbaum',
   'deco.apfelbaum': 'Apfelbaum',
   'deco.tanne': 'Tanne',
   'deco.blumenbeet': 'Blumenbeet',
@@ -209,6 +214,20 @@ const DE = {
   'deco.sonnenblumen': 'Sonnenblumen',
   'deco.kuerbisse': 'Kürbisse',
   'deco.pilze': 'Pilze',
+  'deco.zuckerstange': 'Zuckerstange',
+  'deco.lolliblumen': 'Lolliblumen',
+  'deco.bonbonbusch': 'Bonbonbusch',
+  'deco.zuckerwatte': 'Zuckerwatte',
+  'deco.schokobrunnen': 'Schokobrunnen',
+  'deco.lebkuchenhaus': 'Lebkuchenhaus',
+  'deco.sandburg': 'Sandburg',
+  'deco.fahne': 'Fahne',
+  'gruppe.baum': 'Bäume',
+  'gruppe.garten': 'Garten',
+  'gruppe.nasch': 'Naschwerk',
+  'gruppe.tier': 'Tiere',
+  'gruppe.bau': 'Dorf',
+  'shop.neu': 'Neu',
   'deco.bienenstock': 'Bienenstock',
   'deco.vogelhaus': 'Vogelhaus',
   'deco.feuerstelle': 'Feuerstelle',
