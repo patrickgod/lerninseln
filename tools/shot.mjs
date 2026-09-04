@@ -181,6 +181,45 @@ for (const [name, haus, sterne] of [
   await shot(name);
 }
 
+// The endgame: the island growing. Before, during the shake, and after.
+if (want('beben')) {
+  await page.goto(`http://localhost:${PORT}/`);
+  await page.evaluate(() => {
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+      v: 1, stars: 200, candy: 400, placed: [], strength: {}, rounds: {}, ausbau: {},
+      seen: ['shop:init', 'luma:say.lumaHallo', 'luma:say.lumaInsel',
+        'luma:say.lumaHaus', 'luma:say.lumaBauen'],
+      sound: false, voice: false,
+    }));
+  });
+  await page.reload();
+  await page.waitForTimeout(800);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(700);
+  await page.locator('.karte').first().tap();       // the whole island
+  await page.waitForTimeout(600);
+  await shot('beben-vorher');
+  await page.locator('.karte').first().tap();
+  await page.waitForTimeout(400);
+  await page.locator('button', { hasText: 'Bauen' }).first().tap();
+  await page.waitForTimeout(300);
+  await page.locator('button', { hasText: 'Bauen' }).first().tap();
+  await page.waitForTimeout(500);
+  await page.evaluate(() => {
+    const w = document.querySelector('.shop-wrap');
+    if (w) w.scrollTop = w.scrollHeight;
+  });
+  await page.waitForTimeout(300);
+  await shot('beben-laden');
+  await page.locator('.shop-item.ausbau').first().tap();
+  await page.waitForTimeout(700);
+  await shot('beben-mitten');
+  await page.waitForTimeout(2400);
+  await page.locator('.karte').first().tap();
+  await page.waitForTimeout(700);
+  await shot('beben-nachher');
+}
+
 if (want('shop')) await shot('shop');
 
 // The sweet corner, and the two animals that cannot be bought.

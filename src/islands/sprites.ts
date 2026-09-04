@@ -833,11 +833,31 @@ export function lighthouse(): Sprite {
  * visible walls are a light face and a dark face; the base sits on the
  * tile diamond.
  */
+/**
+ * A house, and how lived-in it is.
+ *
+ * `stufe` is 0..5 and comes from how many rounds have been played
+ * inside. It buys DECORATION and nothing else: a lamp by the door, a
+ * chimney with smoke, a window box, a weathervane, a wreath. It never
+ * changes the size or the silhouette, because a child has to be able to
+ * find the house they know.
+ *
+ * Patrick asked for houses that gain levels "und somit Schwierigkeits-
+ * grade und Aussehen". This is the Aussehen half, and it is deliberately
+ * the bigger half: the difficulty already adapts per FACT through the
+ * spaced-repetition strength, which is finer-grained than a house-wide
+ * tier and knows that a child can be solid on 5 and shaky on 8 in the
+ * same house.
+ *
+ * Nothing here is ever taken away, and there is no level shown as a
+ * number anywhere. It is a record of work that happens to be pretty.
+ */
 export function house(
   roof: 'terracotta' | 'slate' | 'thatch',
   seed: number,
   lit: boolean,
   accent: Ramp = P.chalk,
+  stufe = 0,
 ): Sprite {
   const p = new Px(44, 52);
   const baseY = p.h - 1 - TILE_H / 2;
@@ -913,6 +933,55 @@ export function house(
   p.rect(cx - 4, eavesY - 2, 9, 4, shade(accent, 2));
   p.rect(cx - 3, eavesY - 1, 7, 2, shade(accent, 3));
   p.set(cx - 3, eavesY - 2, shade(accent, 4));
+
+  // ------------------------------------------------- how lived-in it is
+  //
+  // One thing per level, each on a different part of the house, so five
+  // of them read as a house somebody looks after rather than as a house
+  // with five badges on it.
+  if (stufe >= 1) {
+    // A lantern by the door. The first thing anybody hangs up.
+    const lx = doorX + 6;
+    p.rect(lx, doorBotY - 13, 1, 3, shade(P.timber, 1));
+    p.rect(lx - 1, doorBotY - 11, 3, 3, shade(P.glow, 3));
+    p.set(lx, doorBotY - 10, shade(P.glow, 4));
+  }
+  if (stufe >= 2) {
+    // A chimney, with smoke. Only ever drawn leaning the same way as
+    // the light, so it does not fight the roof.
+    p.rect(cx + 3, eavesY - 12, 4, 7, shade(P.terracotta, 1));
+    p.rect(cx + 3, eavesY - 12, 2, 7, shade(P.terracotta, 2));
+    p.rect(cx + 2, eavesY - 13, 6, 2, shade(P.stone, 2));
+    // Three small puffs, getting paler as they rise. They were 2, 3 and
+    // 4 pixels of radius and at island scale that is a grey balloon
+    // bigger than the roof — the contact sheet made that unmissable.
+    p.ellipse(cx + 5, eavesY - 15, 2, 2, shade(P.stone, 4));
+    p.ellipse(cx + 4, eavesY - 18, 2, 1, shade(P.stone, 4));
+    p.set(cx + 3, eavesY - 20, shade(P.stone, 4));
+  }
+  if (stufe >= 3) {
+    // A window box under the window on the shaded face.
+    p.rect(wx - 3, wBotY - wallH + 8, 7, 2, shade(P.timber, 1));
+    for (let i = 0; i < 4; i++) {
+      p.set(wx - 2 + i, wBotY - wallH + 7, shade([P.blossom, P.citrus, P.fruit, P.candy][i], 3));
+    }
+  }
+  if (stufe >= 4) {
+    // A weathervane, at the LEFT end of the ridge. In the middle it grew
+    // out of the chimney, which is one roof feature too many in one
+    // place and read as a mistake rather than as a house.
+    p.rect(cx - 9, eavesY - 9, 1, 6, shade(P.stone, 1));
+    p.rect(cx - 11, eavesY - 10, 5, 2, shade(P.glow, 2));
+    p.set(cx - 7, eavesY - 9, shade(P.glow, 3));
+  }
+  if (stufe >= 5) {
+    // A wreath on the door, which is the one thing nobody hangs up
+    // until they have lived somewhere a long time.
+    p.ellipse(doorX, doorBotY - 7, 3, 3, shade(P.leaf, 2));
+    p.ellipse(doorX, doorBotY - 7, 2, 2, shade(P.timber, 2));
+    p.set(doorX - 2, doorBotY - 8, shade(P.fruit, 3));
+    p.set(doorX + 2, doorBotY - 6, shade(P.fruit, 3));
+  }
 
   finish(p);
   // The ground shadow goes on AFTER the rim. Drawn before it, the

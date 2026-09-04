@@ -201,6 +201,48 @@ export function land(): void {
   whoosh(0.34, 900);
 }
 
+/**
+ * The rumble of an island growing.
+ *
+ * Not a synthesised "thump" like the others — a long band of filtered
+ * noise that swells and dies, because an earthquake is a texture rather
+ * than a note. Two and a half seconds, which is as long as anything in
+ * this app is allowed to hold a child still.
+ *
+ * Kept quiet on purpose. This is the loudest thing in the game and it
+ * still has to be playable in a waiting room with the volume up.
+ */
+export function beben(): void {
+  if (!ctx || !master || !get().sound) return;
+  const c = ctx;
+  const dauer = 2.5;
+  const n = Math.floor(c.sampleRate * dauer);
+  const buf = c.createBuffer(1, n, c.sampleRate);
+  const d = buf.getChannelData(0);
+  // Brown-ish noise: white noise integrated, which puts the energy low
+  // where a rumble lives instead of up in the hiss.
+  let letzter = 0;
+  for (let i = 0; i < n; i++) {
+    const weiss = Math.random() * 2 - 1;
+    letzter = (letzter + weiss * 0.03) / 1.02;
+    d[i] = letzter * 12;
+  }
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  const lp = c.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 190;
+  const g = c.createGain();
+  const t = c.currentTime;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.5, t + 0.35);
+  g.gain.setValueAtTime(0.5, t + 1.5);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dauer);
+  src.connect(lp).connect(g).connect(master);
+  src.start(t);
+  src.stop(t + dauer);
+}
+
 // ---------------------------------------------------------------- voice
 //
 // Two sources, in order of preference:

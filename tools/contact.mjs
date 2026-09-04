@@ -462,5 +462,47 @@ put(pfeil(true), 230, 900, 3);
 `);
 }
 
+if (doIt('stufen')) {
+  await sheet('hausstufen', `
+import * as S from '../src/islands/sprites.js';
+import { P } from '../src/core/palette.js';
+
+// The same house at every level, side by side. A level buys decoration
+// and must never change the silhouette — a child has to be able to find
+// the house they know — so the thing to look for here is that all six
+// are recognisably the same building.
+const S2 = 5, CELL = 260, LABEL = 30;
+const c = document.createElement('canvas');
+c.width = CELL * 3 + 20;
+c.height = (CELL + LABEL) * 2 + 20;
+document.body.appendChild(c);
+const ctx = c.getContext('2d')!;
+ctx.imageSmoothingEnabled = false;
+ctx.fillStyle = '#3f6c3a';
+ctx.fillRect(0, 0, c.width, c.height);
+
+const ground = S.groundTile(P.grass, 3, 0);
+
+for (let lvl = 0; lvl <= 5; lvl++) {
+  const col = lvl % 3, row = (lvl / 3) | 0;
+  const cx = 10 + col * CELL + CELL / 2;
+  const baseY = 10 + row * (CELL + LABEL) + CELL - 40;
+  const g = ground.px.toCanvas();
+  ctx.drawImage(g, Math.round(cx - ground.ax * S2), Math.round(baseY - ground.ay * S2),
+    g.width * S2, g.height * S2);
+  const h = S.house('terracotta', 7, true, P.fruit, lvl);
+  const hc = h.px.toCanvas();
+  ctx.drawImage(hc, Math.round(cx - h.ax * S2), Math.round(baseY - h.ay * S2),
+    hc.width * S2, hc.height * S2);
+  ctx.fillStyle = '#f8f0dc';
+  ctx.font = 'bold 20px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Stufe ' + lvl, cx, 10 + row * (CELL + LABEL) + CELL + 18);
+}
+
+(window as any).ready = true;
+`);
+}
+
 await browser.close();
 rmSync('.contact', { recursive: true, force: true });

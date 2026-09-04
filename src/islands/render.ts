@@ -245,6 +245,17 @@ function zaehleBaeume(placed: Placed[]): { x: number; y: number }[] {
 }
 
 const sceneryCache = new Map<string, { x: number; y: number; seed: number }[]>();
+
+/**
+ * Forget what we know about an island's shape.
+ *
+ * The land mask is cached, the wood is cached, and the sprite bakes are
+ * keyed by tile — all of which are correct right up until the coastline
+ * moves, which it now can.
+ */
+export function vergissWald(islandId: string): void {
+  sceneryCache.delete(islandId);
+}
 function sceneryOf(islandId: string): { x: number; y: number; seed: number }[] {
   let s = sceneryCache.get(islandId);
   if (!s) {
@@ -757,8 +768,9 @@ export function draw(
       } else if (hs) {
         const isArriving = o.arriving === hs.id;
         const bob = isArriving ? Math.round(Math.sin(o.time * 6) * 2) : 0;
-        const b = bake(`h:${hs.roof}:${hs.id}`,
-          () => S.house(hs.roof, hs.x * 977 + hs.y * 31, true, ACCENTS[hs.id] ?? P.chalk));
+        const stufe = state.houseLevel(hs.id);
+        const b = bake(`h:${hs.roof}:${hs.id}:${stufe}`,
+          () => S.house(hs.roof, hs.x * 977 + hs.y * 31, true, ACCENTS[hs.id] ?? P.chalk, stufe));
         ctx.drawImage(b.c, Math.round(sx - b.ax), Math.round(sy - b.ay) + bob);
         // Remember where it landed, in CSS pixels, for the tap test.
         hits.push({

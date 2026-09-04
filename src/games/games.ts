@@ -16,7 +16,7 @@
 //   child to look at the frame rather than to guess.
 
 import type { Game, Question, Prompt } from './types.js';
-import { strengthOf } from '../core/state.js';
+import { strengthOf, houseLevel } from '../core/state.js';
 import { WOERTER, REIME } from './woerter.js';
 import { hasBild } from './wortbilder.js';
 import { FORMEN, musterZeile, type Form } from './formen.js';
@@ -532,9 +532,15 @@ function expectedAnswer(gameId: string, q: Question): string {
 
 export const steckwuerfel: Game = {
   id: 'steckwuerfel',
+  // The range WIDENS with the house. A child on their first visit is
+  // asked about bars of four, five and six; by the fifth level the bars
+  // go to ten. This is the difficulty half of what a house level buys,
+  // and it is a range rather than a tier — the per-fact strength still
+  // decides which of them come up.
   facts: () => {
+    const bis = Math.min(10, 6 + houseLevel('steckwuerfel'));
     const out: string[] = [];
-    for (let ganz = 4; ganz <= 10; ganz++) {
+    for (let ganz = 4; ganz <= bis; ganz++) {
       for (let teil = 0; teil <= ganz; teil++) out.push(`sw:${ganz}:${teil}`);
     }
     return out;
@@ -574,8 +580,9 @@ export const steckwuerfel: Game = {
 export const zahlenhaus: Game = {
   id: 'zahlenhaus',
   facts: () => {
+    const bis = Math.min(10, 6 + houseLevel('zahlenhaus'));
     const out: string[] = [];
-    for (const dach of [5, 6, 7, 8, 9, 10]) {
+    for (let dach = 5; dach <= bis; dach++) {
       for (let a = 0; a <= dach; a++) out.push(`zh:${dach}:${a}`);
     }
     return out;

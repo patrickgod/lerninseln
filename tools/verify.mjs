@@ -759,6 +759,117 @@ await ctx.setOffline(false);
     gelesen > 0 && gemalt > 0, `${gelesen} to read, ${gemalt} to find`);
 }
 
+// ------------------------------------------------------------ the endgame
+
+// An island is finite, and a child who has filled theirs has finished
+// the game. So the coast can be pushed outwards for sweets — four
+// times, with an earthquake — and each house keeps a count of how often
+// it has been played, which buys it decoration and a wider range of
+// numbers.
+//
+// All of it is state that persists, and all of it is the kind of thing
+// that looks perfectly fine on screen while being quietly wrong.
+
+{
+  await page.goto(`${BASE}?perf=1`);
+  await page.evaluate(() => {
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+      v: 1, stars: 200, candy: 400, placed: [], strength: {}, rounds: {}, ausbau: {},
+      seen: ['shop:init', 'luma:say.lumaHallo', 'luma:say.lumaInsel',
+        'luma:say.lumaHaus', 'luma:say.lumaBauen'],
+      sound: false, voice: false,
+    }));
+  });
+  await page.reload();
+  await page.waitForTimeout(700);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(700);
+
+  const vorher = await page.evaluate(() => window.__platz('mathe'));
+  const oeffneLaden = async () => {
+    await page.locator('button', { hasText: 'Bauen' }).first().tap();
+    await page.waitForTimeout(300);
+    await page.locator('button', { hasText: 'Bauen' }).first().tap();
+    await page.waitForTimeout(500);
+  };
+  await oeffneLaden();
+  check('the shop offers the island itself, last',
+    await page.locator('.shop-item.ausbau').count() === 1);
+
+  await page.locator('.shop-item.ausbau').first().tap();
+  await page.waitForTimeout(3000);      // the earthquake
+  const nachher = await page.evaluate(() => window.__platz('mathe'));
+  check('growing the island actually adds land',
+    nachher > vorher + 60, `${vorher} -> ${nachher} free tiles`);
+  const geld = await page.evaluate(() => {
+    const raw = JSON.parse(localStorage.getItem('lerninseln.save.v1') ?? '{}');
+    return { candy: raw.candy, ausbau: raw.ausbau };
+  });
+  check('and it costs the sweets it said it would',
+    geld.candy === 400 - 45, `${geld.candy} left`);
+
+  await page.reload();
+  await page.waitForTimeout(700);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(700);
+  const nachReload = await page.evaluate(() => window.__platz('mathe'));
+  check('and the bigger island is still there after a reload',
+    nachReload === nachher, `${nachher} -> ${nachReload}`);
+
+  // Four, and then it is finished. A shop item that can be bought
+  // forever is a shop item with no ending, and this one is the ending.
+  await page.evaluate(() => {
+    const raw = JSON.parse(localStorage.getItem('lerninseln.save.v1') ?? '{}');
+    raw.candy = 4000;
+    raw.ausbau = { mathe: 4 };
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify(raw));
+  });
+  await page.reload();
+  await page.waitForTimeout(700);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(700);
+  await oeffneLaden();
+  check('after four times the island is as big as it gets',
+    await page.locator('.shop-item.ausbau[disabled]').count() === 1);
+}
+
+{
+  // Rounds played, and what they buy.
+  await page.goto(`${BASE}?perf=1`);
+  await page.evaluate(() => {
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify({
+      v: 1, stars: 60, candy: 0, placed: [], strength: {}, rounds: {}, ausbau: {},
+      seen: ['shop:init', 'luma:say.lumaHallo', 'luma:say.lumaInsel',
+        'luma:say.lumaHaus', 'luma:say.lumaBauen'],
+      sound: false, voice: false,
+    }));
+  });
+  await page.reload();
+  await page.waitForTimeout(700);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(700);
+  await tippeHaus('verliebten Zahlen');
+  await playRound(false);
+  await page.locator('button', { hasText: 'Zur Insel' }).first().tap();
+  await page.waitForTimeout(900);
+  check('a round is counted even when it went badly',
+    await page.evaluate(() => window.__runden('verliebte-zahlen')) === 1,
+    'a counter that only moves on a good round is a score with a friendly name');
+
+  // And the level it buys. Two rounds is the first step.
+  await page.evaluate(() => {
+    const raw = JSON.parse(localStorage.getItem('lerninseln.save.v1') ?? '{}');
+    raw.rounds = { 'verliebte-zahlen': 14 };
+    localStorage.setItem('lerninseln.save.v1', JSON.stringify(raw));
+  });
+  await page.reload();
+  await page.waitForTimeout(700);
+  const stufe = await page.evaluate(() => window.__stufe('verliebte-zahlen'));
+  check('and fourteen of them make a well-worn house', stufe === 4, `level ${stufe}`);
+  const keine = await page.evaluate(() => window.__stufe('zahlenhaus'));
+  check('while a house nobody has visited is level zero', keine === 0);
+}
+
 // ---------------------------------------------------------------- Luma
 
 // She came over from Funkelwelt with one rule attached, and the rule is

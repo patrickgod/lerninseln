@@ -52,6 +52,24 @@ export interface Save {
    * to below zero, and the number is never shown to anybody.
    */
   strength: Record<string, number>;
+  /**
+   * How many rounds each house has been played, keyed by house id.
+   *
+   * A record of work, and the only counter in the app besides the two
+   * currencies. It never goes down and it is never compared to anything
+   * — not to a target, not to another child, not to yesterday. What it
+   * does is give a house a LEVEL, which changes how the house looks on
+   * the island and how wide a range of numbers it asks about.
+   */
+  rounds: Record<string, number>;
+  /**
+   * How far each island has been extended, keyed by island id.
+   *
+   * The endgame. An island is finite, and a child who has filled theirs
+   * has finished the game — so the coast can be pushed outwards for
+   * sweets, four times, and each time is an earthquake.
+   */
+  ausbau: Record<string, number>;
   sound: boolean;
   voice: boolean;
   /**
@@ -75,6 +93,8 @@ function fresh(): Save {
     seen: [],
     placed: [],
     strength: {},
+    rounds: {},
+    ausbau: {},
     sound: true,
     voice: true,
     name: '',
@@ -113,6 +133,8 @@ export function init(): Save {
               && typeof p.x === 'number' && typeof p.y === 'number')
         : base.placed,
       strength: raw.strength && typeof raw.strength === 'object' ? { ...raw.strength } : base.strength,
+      rounds: raw.rounds && typeof raw.rounds === 'object' ? { ...raw.rounds } : base.rounds,
+      ausbau: raw.ausbau && typeof raw.ausbau === 'object' ? { ...raw.ausbau } : base.ausbau,
       sound: raw.sound !== false,
       voice: raw.voice !== false,
       // Trimmed and capped: this goes into a heading, and a name that
@@ -221,6 +243,51 @@ export function occupied(island: string, x: number, y: number): boolean {
 }
 
 // ------------------------------------------------------------ settings
+
+/**
+ * One more round of this house, please.
+ *
+ * Counted whatever the child scored, because it is a record of having
+ * turned up rather than of having done well. AGENTS.md rule 10 cuts
+ * both ways: a counter that only moves when you get things right is a
+ * score with a friendly name.
+ */
+export function recordRound(houseId: string): void {
+  state.rounds[houseId] = (state.rounds[houseId] ?? 0) + 1;
+  flush();
+}
+
+export function roundsOf(houseId: string): number {
+  return state.rounds[houseId] ?? 0;
+}
+
+/**
+ * The level of a house: how worn its doorstep is.
+ *
+ * A gentle curve — 0, 2, 5, 9, 14, 20 rounds — so the first step comes
+ * on the second evening and the last one takes a month. Capped at five
+ * because a number that keeps climbing forever is a score.
+ */
+export function houseLevel(houseId: string): number {
+  const n = roundsOf(houseId);
+  const stufen = [2, 5, 9, 14, 20];
+  let lvl = 0;
+  for (const s of stufen) if (n >= s) lvl++;
+  return lvl;
+}
+
+export function ausbauOf(islandId: string): number {
+  return state.ausbau[islandId] ?? 0;
+}
+
+/** Push the coast out one step. Returns false if the sweets are short. */
+export function ausbauen(islandId: string, preis: number): boolean {
+  if (state.candy < preis) return false;
+  state.candy -= preis;
+  state.ausbau[islandId] = (state.ausbau[islandId] ?? 0) + 1;
+  flush();
+  return true;
+}
 
 export function setSound(on: boolean): void {
   state.sound = on;

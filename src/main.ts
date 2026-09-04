@@ -19,8 +19,8 @@ import { wuerfelCanvas, stangeCanvas } from './games/wuerfel.js';
 import { fahrzeugCanvas, pfeilCanvas, type Fahrzeug } from './games/fahrzeuge.js';
 import {
   ISLANDS, GRID, island, unlockedHouses, housesOn, buildable,
+  isLand, ausbauPreis, vergissLand,
   type IslandDef, type HouseDef,
-  isLand,
 } from './islands/islands.js';
 import * as render from './islands/render.js';
 import { deco, sortiment, neuAb, GRUPPEN } from './islands/decor.js';
@@ -230,6 +230,8 @@ if (perfOn) {
     __platz: (id: string) => number;
     __kamera: () => { x: number; y: number };
     __ueberLand: () => boolean;
+    __stufe: (id: string) => number;
+    __runden: (id: string) => number;
   };
   dbg.__zoom = (id: string) => render.blick(w(), h(), id, render.mitte(id)).scale;
   dbg.__schirme = (id: string) => render.inSchirmen(w(), h(), id);
@@ -239,6 +241,8 @@ if (perfOn) {
   // cannot be dragged away from under the child" actually means, and
   // the first version of that check asserted something else entirely
   // and passed with the clamp deleted.
+  dbg.__stufe = (id: string) => state.houseLevel(id);
+  dbg.__runden = (id: string) => state.roundsOf(id);
   dbg.__ueberLand = () => {
     const t = render.screenToTile(view, stage.clientWidth / 2, stage.clientHeight / 2);
     return isLand(currentIsland, t.x, t.y);
@@ -1084,9 +1088,122 @@ function showShop(): void {
     wrap.appendChild(grid);
   }
 
+  // And then the island itself. The endgame, and the only thing in the
+  // shop that is not an object: when a child has filled their island
+  // they have finished the game, so the coast can be pushed outwards.
+  //
+  // Last in the list on purpose. It costs more than anything else and a
+  // child who has just arrived should not be looking at it.
+  const preis = ausbauPreis(currentIsland);
+  wrap.appendChild(el('h3', 'shop-gruppe', t('shop.gruppeInsel')));
+  const inselGrid = el('div', 'shop-grid');
+  const karte = el('button', 'shop-item ausbau');
+  karte.appendChild(inselBild());
+  karte.appendChild(el('div', 'label',
+    preis === null ? t('shop.ausbauFertig') : t('shop.ausbau')));
+  if (preis !== null) {
+    const pr = el('div', 'price');
+    pr.appendChild(iconCanvas('bonbon', 22));
+    pr.appendChild(el('span', undefined, String(preis)));
+    karte.appendChild(pr);
+    if (state.get().candy < preis) karte.disabled = true;
+    tap(karte, () => {
+      if (!state.ausbauen(currentIsland, preis)) { toast(t('shop.tooExpensive')); return; }
+      sheet.remove();
+      erdbeben();
+    });
+  } else {
+    karte.disabled = true;
+  }
+  inselGrid.appendChild(karte);
+  wrap.appendChild(inselGrid);
+
   sheet.appendChild(wrap);
   sheet.appendChild(button(t('shop.close'), () => sheet.remove()));
   ui.appendChild(sheet);
+}
+
+/** A little picture of an island growing: the coast, and a ring outside it. */
+function inselBild(): HTMLCanvasElement {
+  const c = el('canvas');
+  const S = 3;
+  c.width = 22 * S;
+  c.height = 22 * S;
+  c.style.width = `${22 * S}px`;
+  c.style.height = `${22 * S}px`;
+  const cc = c.getContext('2d', { willReadFrequently: true })!;
+  cc.imageSmoothingEnabled = false;
+  cc.scale(S, S);
+  cc.fillStyle = shade(P.sea, 2);
+  cc.fillRect(0, 0, 22, 22);
+  // The island it will become, dashed, and the one it is, solid.
+  cc.fillStyle = shade(P.sand, 3);
+  cc.beginPath();
+  cc.moveTo(11, 1); cc.lineTo(21, 11); cc.lineTo(11, 21); cc.lineTo(1, 11);
+  cc.closePath(); cc.fill();
+  cc.fillStyle = shade(P.grass, 2);
+  cc.beginPath();
+  cc.moveTo(11, 5); cc.lineTo(17, 11); cc.lineTo(11, 17); cc.lineTo(5, 11);
+  cc.closePath(); cc.fill();
+  cc.fillStyle = shade(P.glow, 3);
+  for (const [x, y] of [[11, 2], [19, 11], [11, 19], [3, 11]]) cc.fillRect(x - 1, y - 1, 2, 2);
+  return c;
+}
+
+/**
+ * The island grows, and the ground says so.
+ *
+ * Patrick asked for "schönem juice wie Erdbeben", and an earthquake is
+ * the right shape for this: it is the only moment in the app where the
+ * WORLD changes rather than something being added to it, and the only
+ * one that has earned two and a half seconds of a child's attention.
+ *
+ * Three things at once and none of them is a dialog: the screen shakes
+ * hard and settles, dust comes up off the whole coast, and the new land
+ * is simply there when it stops. Luma says what happened afterwards,
+ * because a child who has just felt the ground move does not want to
+ * read.
+ */
+function erdbeben(): void {
+  building = false;
+  holding = null;
+  uebersicht = false;
+  schwung = { x: 0, y: 0 };
+
+  audio.beben();
+  fx.shake(11, 2.2);
+
+  // Dust off the coast, in waves, all the way round. Thrown from the
+  // OLD coastline, so the new ring appears out of it.
+  const alt = render.landBox(currentIsland);
+  const wolke = (): void => {
+    for (let i = 0; i < 7; i++) {
+      const t = Math.random() * Math.PI * 2;
+      const sx = ((alt.minX + alt.maxX) / 2 + Math.cos(t) * (alt.maxX - alt.minX) / 2 + view.ox)
+        * view.scale;
+      const sy = ((alt.minY + alt.maxY) / 2 + Math.sin(t) * (alt.maxY - alt.minY) / 2 + view.oy)
+        * view.scale;
+      fx.burst('staub', sx, sy, { n: 5, speed: 120, up: 0.5, gravity: 90, life: 1.1 });
+    }
+  };
+  const takt = window.setInterval(wolke, 180);
+  wolke();
+
+  // Halfway through, the land actually appears. Not at the start — the
+  // shake has to be a warning first, or the new coast simply blinks in.
+  window.setTimeout(() => {
+    vergissLand(currentIsland);
+    render.vergissWald(currentIsland);
+    cam = render.mitte(currentIsland, state.get().stars);
+    blickSetzen();
+    audio.sparkle(6);
+    drawIslandUi();
+  }, 1100);
+
+  window.setTimeout(() => {
+    window.clearInterval(takt);
+    luma.zeige('say.beben');
+  }, 2400);
 }
 
 const thumbCache = new Map<string, string>();
@@ -1607,6 +1724,7 @@ function finishRound(): void {
   const candy = round.right + (perfect ? 5 : 2);
   state.addStars(stars);
   state.addCandy(candy);
+  state.recordRound(round.house.id);
   const after = state.get().stars;
 
   // Did a PAIR come good? Both directions at full strength is the whole

@@ -12,6 +12,7 @@
 
 import { t } from '../core/i18n.js';
 import { deco } from './decor.js';
+import { ausbauOf } from '../core/state.js';
 
 /**
  * The island is a GRID x GRID field of tiles.
@@ -390,7 +391,33 @@ export interface Land {
   sand: boolean[];
 }
 
+/**
+ * How much further out the coast goes per expansion, in the same
+ * normalised units the coastline is defined in.
+ *
+ * 0.09 is a measurement: it is the smallest step that adds a visible
+ * ring of land all the way round rather than a scatter of new tiles at
+ * the widest points, and four of them take the island from 0.80 to
+ * 1.16, which is as far as a 51x51 grid can carry a round island.
+ */
+export const AUSBAU_SCHRITT = 0.09;
+
+/** What each expansion costs, in sweets. Four of them, and no more. */
+export const AUSBAU_PREISE = [45, 90, 170, 300];
+
+export function ausbauPreis(islandId: string): number | null {
+  const n = ausbauOf(islandId);
+  return n < AUSBAU_PREISE.length ? AUSBAU_PREISE[n] : null;
+}
+
+// Keyed by island AND by how far it has been extended, because the
+// coastline is the one thing in this file that is allowed to change.
 const cache = new Map<string, Land>();
+
+/** Throw the coastline away, so the next draw builds the bigger one. */
+export function vergissLand(islandId: string): void {
+  for (const k of [...cache.keys()]) if (k.startsWith(`${islandId}:`)) cache.delete(k);
+}
 
 /**
  * The coastline, as a per-tile distance field rather than a per-tile
@@ -403,7 +430,8 @@ const cache = new Map<string, Land>();
  * its shape, which is the property that says the shape is real.
  */
 export function land(islandId: string): Land {
-  const hit = cache.get(islandId);
+  const key = `${islandId}:${ausbauOf(islandId)}`;
+  const hit = cache.get(key);
   if (hit) return hit;
 
   const def = island(islandId);
@@ -423,7 +451,7 @@ export function land(islandId: string): Land {
   const sand: boolean[] = new Array(GRID * GRID).fill(false);
 
   const radiusAt = (angle: number): number => {
-    let rad = 0.80;
+    let rad = 0.80 + AUSBAU_SCHRITT * ausbauOf(islandId);
     for (const l of lobes) rad += Math.sin(angle * l.k + l.phase) * l.amp;
     return rad;
   };
@@ -460,7 +488,7 @@ export function land(islandId: string): Land {
   }
 
   const out = { mask, sand };
-  cache.set(islandId, out);
+  cache.set(key, out);
   return out;
 }
 

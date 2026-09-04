@@ -47,6 +47,11 @@ const DE = {
   // -------------------------------------------------------- the shop
   'shop.title': 'Was möchtest du bauen?',
   'shop.geliefert': 'Das Boot hat etwas Neues gebracht!',
+  'shop.ausbau': 'Insel vergrößern',
+  'shop.ausbauFertig': 'Deine Insel ist so groß wie sie werden kann.',
+  'shop.gruppeInsel': 'Die Insel selbst',
+  'say.beben':
+    'Die Erde hat gewackelt! Deine Insel ist gewachsen. Schau, wie viel Platz du jetzt hast.',
   'shop.close': 'Fertig',
   'shop.tooExpensive': 'Dafür brauchst du noch mehr Bonbons',
   'shop.placeIt': 'Tippe auf einen freien Platz',
