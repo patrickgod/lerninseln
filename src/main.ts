@@ -8,6 +8,7 @@
 // The order of things in here follows the order a child meets them.
 
 import { t } from './core/i18n.js';
+import { P, shade } from './core/palette.js';
 import * as state from './core/state.js';
 import * as audio from './core/audio.js';
 import * as fx from './core/fx.js';
@@ -16,6 +17,7 @@ import { tenFrameCanvas } from './core/tenframe.js';
 import {
   ISLANDS, GRID, island, unlockedHouses, housesOn, buildable,
   type IslandDef, type HouseDef,
+  isLand,
 } from './islands/islands.js';
 import * as render from './islands/render.js';
 import { deco, sortiment, neuAb, GRUPPEN } from './islands/decor.js';
@@ -39,6 +41,26 @@ type Screen = 'picker' | 'island' | 'round';
 
 let screen: Screen = 'picker';
 let currentIsland = 'mathe';
+
+/**
+ * The camera, in sprite pixels, and whether we are looking at the whole
+ * island or standing on it.
+ *
+ * The islands are bigger than the screen now, so there has to be a
+ * camera. Two rules keep that from being something a six-year-old can
+ * get lost in:
+ *
+ *   * `render.klemme` holds the view rectangle inside the land, so
+ *     panning as hard as you like still leaves the island under your
+ *     thumb. There is no empty-ocean state to be stranded in.
+ *   * one button switches between the whole island and the place you
+ *     were standing, and in the whole-island view a tap on anywhere
+ *     takes you there. That is the map, and it needs no words.
+ */
+let cam = { x: 0, y: 0 };
+let uebersicht = false;
+/** Pan momentum, in sprite pixels per second. */
+let schwung = { x: 0, y: 0 };
 let building = false;
 let holding: string | null = null;         // decoration id waiting for a tile
 let hover: { x: number; y: number } | null = null;
@@ -142,7 +164,24 @@ function resize(): void {
   fxCanvas.width = stage.width;
   fxCanvas.height = stage.height;
   fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  view = render.fit(w, h, currentIsland);
+  blickSetzen();
+}
+
+/**
+ * Recompute the view from the camera.
+ *
+ * Everything downstream reads `view.ox/oy/scale`, so this one function
+ * is the whole difference between a fixed camera and a moving one.
+ */
+function blickSetzen(): void {
+  const w = stage.clientWidth || window.innerWidth;
+  const h = stage.clientHeight || window.innerHeight;
+  if (uebersicht) {
+    view = render.fit(w, h, currentIsland);
+  } else {
+    cam = render.klemme(w, h, currentIsland, cam);
+    view = render.blick(w, h, currentIsland, cam);
+  }
   fx.setScale(view.scale);
 }
 
@@ -170,20 +209,37 @@ const perf: Record<string, number> = { draw: 0, labels: 0, fx: 0 };
 if (perfOn) (window as unknown as { __perf: typeof perf }).__perf = perf;
 
 /**
- * The camera's integer zoom for a given island, behind the same flag.
+ * What the suite needs to see about the camera, behind the same flag.
  *
- * GRID is capped at 19 because that is the largest island on which all
- * three coastlines still fit an iPad at 2x. At 20 the Sprache island
- * needs more width than there is, `fit` drops to 1, and every sprite in
- * the game is silently half the size — which nothing else here would
- * notice, and which is much worse than a slightly smaller island. So
- * the suite measures the real camera on the real page.
+ * `__zoom` is the zoom the island is BUILT at and must be 2 on every
+ * island — it is a constant now rather than a consequence of the island
+ * size, which is the whole reason an island may be bigger than the
+ * screen. `__schirme` says how many screenfuls the island is, so the
+ * suite can assert that panning is in service of something. `__kamera`
+ * is where the camera is looking, for the clamp check.
  */
 if (perfOn) {
-  (window as unknown as { __zoom: (id: string) => number }).__zoom =
-    (id: string) => render.fit(window.innerWidth, window.innerHeight, id).scale;
-  (window as unknown as { __platz: (id: string) => number }).__platz =
-    (id: string) => render.freieFelder(id, state.get().stars);
+  const w = () => window.innerWidth;
+  const h = () => window.innerHeight;
+  const dbg = window as unknown as {
+    __zoom: (id: string) => number;
+    __schirme: (id: string) => { x: number; y: number };
+    __platz: (id: string) => number;
+    __kamera: () => { x: number; y: number };
+    __ueberLand: () => boolean;
+  };
+  dbg.__zoom = (id: string) => render.blick(w(), h(), id, render.mitte(id)).scale;
+  dbg.__schirme = (id: string) => render.inSchirmen(w(), h(), id);
+  dbg.__platz = (id: string) => render.freieFelder(id, state.get().stars);
+  dbg.__kamera = () => ({ ...cam });
+  // Is the middle of the screen over land? This is what "the island
+  // cannot be dragged away from under the child" actually means, and
+  // the first version of that check asserted something else entirely
+  // and passed with the clamp deleted.
+  dbg.__ueberLand = () => {
+    const t = render.screenToTile(view, stage.clientWidth / 2, stage.clientHeight / 2);
+    return isLand(currentIsland, t.x, t.y);
+  };
 }
 
 function mark(key: string, since: number): void {
@@ -203,6 +259,8 @@ function frame(now: number): void {
   // off the bottom of the screen in one step.
   const dt = Math.min(0.05, Math.max(0, time - last));
   last = time;
+
+  schwungLaufen(dt);
 
   // The shake moves the WHOLE app — island, interface and all — because
   // a shake that only moves the world reads as the world coming loose,
@@ -408,6 +466,59 @@ function purse(): HTMLDivElement {
 function gearButton(): HTMLButtonElement {
   const b = el('button', 'gear', '⚙');
   tap(b, () => { audio.click(); showSettings(); });
+  return b;
+}
+
+/**
+ * The map button: whole island, or standing on it.
+ *
+ * A drawn icon rather than a word, because rule 14 says no text may be
+ * load-bearing and this is the only way to see the far side of an
+ * island. It draws what it will GIVE you — the island diamond when you
+ * are standing on it, a magnifying frame around a piece of it when you
+ * are looking at the whole thing — so the button is a picture of its
+ * own result rather than a symbol to be learned.
+ */
+function karteButton(): HTMLButtonElement {
+  const b = el('button', 'gear karte');
+  const c = el('canvas');
+  const S = 3;
+  c.width = 22 * S;
+  c.height = 22 * S;
+  c.style.width = `${22 * S}px`;
+  c.style.height = `${22 * S}px`;
+  const cc = c.getContext('2d', { willReadFrequently: true })!;
+  cc.imageSmoothingEnabled = false;
+  cc.scale(S, S);
+  const ink = '#241d2b';
+  if (uebersicht) {
+    // A frame around a corner of the diamond: this takes you back in.
+    cc.fillStyle = shade(P.grass, 2);
+    cc.beginPath();
+    cc.moveTo(11, 3); cc.lineTo(20, 9); cc.lineTo(11, 15); cc.lineTo(2, 9);
+    cc.closePath(); cc.fill();
+    cc.strokeStyle = ink;
+    cc.lineWidth = 2;
+    cc.strokeRect(7, 6, 10, 10);
+  } else {
+    // The whole diamond, with the houses on it as dots.
+    cc.fillStyle = shade(P.sea, 2);
+    cc.fillRect(1, 1, 20, 20);
+    cc.fillStyle = shade(P.grass, 2);
+    cc.beginPath();
+    cc.moveTo(11, 3); cc.lineTo(20, 11); cc.lineTo(11, 19); cc.lineTo(2, 11);
+    cc.closePath(); cc.fill();
+    cc.fillStyle = shade(P.terracotta, 2);
+    for (const [x, y] of [[8, 9], [14, 10], [11, 14]]) cc.fillRect(x, y, 3, 3);
+  }
+  b.appendChild(c);
+  tap(b, () => {
+    audio.whoosh();
+    uebersicht = !uebersicht;
+    schwung = { x: 0, y: 0 };
+    blickSetzen();
+    drawIslandUi();
+  });
   return b;
 }
 
@@ -643,6 +754,12 @@ function openIsland(id: string): void {
   screen = 'island';
   building = false;
   holding = null;
+  // Always arrive in the middle, at building zoom. Where a child left
+  // the camera three days ago is not information; where the houses are
+  // is.
+  uebersicht = false;
+  schwung = { x: 0, y: 0 };
+  cam = render.mitte(id);
   resize();
   drawIslandUi();
   sayLine(island(id).sayKey);
@@ -658,6 +775,7 @@ function drawIslandUi(): void {
   ui.appendChild(hud);
 
   const bar = el('div', 'hud');
+  bar.appendChild(karteButton());
   bar.style.top = 'auto';
   bar.style.bottom = 'calc(var(--safe-b) + 12px)';
   bar.style.justifyContent = 'flex-end';
@@ -704,15 +822,123 @@ function drawIslandUi(): void {
   }
 }
 
-// Taps on the world. The canvas is under the UI layer, which does not
-// catch pointer events except on its actual buttons, so this sees every
-// tap that was not a button.
+// The world takes drags as well as taps now, so a tap is "a press that
+// did not move". Everything else on the island is a DOM button and is
+// unaffected — the pointerdown rule in `tap()` is about answer cards,
+// where the fastest possible reaction is the point.
+//
+// The threshold is 10 CSS pixels. A six-year-old aiming at a house
+// wobbles by three or four, and anything under about eight turns half
+// their taps into one-pixel pans that do nothing and feel broken.
+const ZIEH_SCHWELLE = 10;
+
+interface Zug {
+  id: number;
+  x0: number;
+  y0: number;
+  camX: number;
+  camY: number;
+  gezogen: boolean;
+  /** Last two samples, for the throw. */
+  lx: number;
+  ly: number;
+  lt: number;
+  vx: number;
+  vy: number;
+}
+let zug: Zug | null = null;
+
 stage.addEventListener('pointerdown', (ev) => {
   if (screen !== 'island') return;
   audio.unlock();
   const r = stage.getBoundingClientRect();
+  schwung = { x: 0, y: 0 };
+  zug = {
+    id: ev.pointerId,
+    x0: ev.clientX - r.left,
+    y0: ev.clientY - r.top,
+    camX: cam.x,
+    camY: cam.y,
+    gezogen: false,
+    lx: ev.clientX,
+    ly: ev.clientY,
+    lt: performance.now(),
+    vx: 0,
+    vy: 0,
+  };
+  stage.setPointerCapture(ev.pointerId);
+});
+
+stage.addEventListener('pointermove', (ev) => {
+  if (screen !== 'island') return;
+  const r = stage.getBoundingClientRect();
   const px = ev.clientX - r.left;
   const py = ev.clientY - r.top;
+
+  if (!zug || zug.id !== ev.pointerId) {
+    if (building) hover = render.screenToTile(view, px, py);
+    return;
+  }
+
+  const dx = px - zug.x0;
+  const dy = py - zug.y0;
+  if (!zug.gezogen && Math.hypot(dx, dy) > ZIEH_SCHWELLE) {
+    zug.gezogen = true;
+    hover = null;
+  }
+  if (!zug.gezogen) return;
+  // Panning in the overview is meaningless — the whole island is on
+  // screen — so the drag is simply ignored there.
+  if (uebersicht) return;
+
+  // The world moves WITH the finger: drag right and the island comes
+  // right, which means the camera goes left. Getting this backwards is
+  // the single most common way a pan feels wrong, and it is a sign.
+  cam = { x: zug.camX - dx / view.scale, y: zug.camY - dy / view.scale };
+  blickSetzen();
+
+  const now = performance.now();
+  const dt = Math.max(8, now - zug.lt) / 1000;
+  zug.vx = ((ev.clientX - zug.lx) / view.scale) / dt;
+  zug.vy = ((ev.clientY - zug.ly) / view.scale) / dt;
+  zug.lx = ev.clientX;
+  zug.ly = ev.clientY;
+  zug.lt = now;
+});
+
+function zugEnde(ev: PointerEvent): void {
+  if (!zug || zug.id !== ev.pointerId) return;
+  const z = zug;
+  zug = null;
+  if (stage.hasPointerCapture(ev.pointerId)) stage.releasePointerCapture(ev.pointerId);
+
+  if (z.gezogen) {
+    // A throw, but only if the finger was still moving when it left.
+    // Without the recency test, a slow drag that stops and then lifts
+    // flings the island, which reads as the app disagreeing with you.
+    if (performance.now() - z.lt < 90) schwung = { x: -z.vx, y: -z.vy };
+    return;
+  }
+
+  const r = stage.getBoundingClientRect();
+  const px = ev.clientX - r.left;
+  const py = ev.clientY - r.top;
+
+  // In the overview, a tap is "take me there". That is the map, and it
+  // is the reason the overview needs no instructions.
+  if (uebersicht) {
+    const w = stage.clientWidth, h = stage.clientHeight;
+    cam = {
+      x: px / view.scale - view.ox,
+      y: py / view.scale - view.oy,
+    };
+    uebersicht = false;
+    blickSetzen();
+    audio.whoosh();
+    void w; void h;
+    drawIslandUi();
+    return;
+  }
 
   if (building) {
     const tile = render.screenToTile(view, px, py);
@@ -734,13 +960,30 @@ stage.addEventListener('pointerdown', (ev) => {
     return;
   }
   startRound(hit.house);
+}
+
+stage.addEventListener('pointerup', zugEnde);
+stage.addEventListener('pointercancel', (ev) => {
+  if (zug && zug.id === ev.pointerId) zug = null;
 });
 
-stage.addEventListener('pointermove', (ev) => {
-  if (screen !== 'island' || !building) return;
-  const r = stage.getBoundingClientRect();
-  hover = render.screenToTile(view, ev.clientX - r.left, ev.clientY - r.top);
-});
+/** Let the throw run out. Called once a frame while on an island. */
+function schwungLaufen(dt: number): void {
+  if (screen !== 'island' || uebersicht || zug) return;
+  if (Math.abs(schwung.x) < 4 && Math.abs(schwung.y) < 4) {
+    schwung = { x: 0, y: 0 };
+    return;
+  }
+  cam = { x: cam.x + schwung.x * dt, y: cam.y + schwung.y * dt };
+  const vorher = { ...cam };
+  blickSetzen();
+  // The clamp moved us: we have hit the edge, so the throw stops rather
+  // than grinding along it.
+  if (Math.abs(vorher.x - cam.x) > 0.5) schwung.x = 0;
+  if (Math.abs(vorher.y - cam.y) > 0.5) schwung.y = 0;
+  const reibung = Math.pow(0.0025, dt);
+  schwung = { x: schwung.x * reibung, y: schwung.y * reibung };
+}
 
 function onBuildTap(x: number, y: number): void {
   if (x < 0 || y < 0 || x >= GRID || y >= GRID) return;

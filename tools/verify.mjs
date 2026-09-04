@@ -563,6 +563,121 @@ await ctx.setOffline(false);
     eng.length === 0, platz.map(([id, n]) => `${id}=${n}`).join(' '));
 }
 
+// ------------------------------------------------------------ the camera
+
+// The islands are bigger than the screen now, so there is a camera, and
+// a camera is the kind of thing that goes wrong in ways a screenshot
+// cannot show: it pans the wrong way, or it lets a six-year-old drag
+// the island off into open ocean and strand themselves, or it turns
+// every tap on a house into a one-pixel pan.
+
+{
+  await page.goto(`${BASE}?perf=1`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForTimeout(700);
+
+  const schirme = await page.evaluate(
+    () => ['mathe', 'sprache', 'entdecker'].map((id) => [id, window.__schirme(id)]));
+  const klein = schirme.filter(([, s]) => s.x < 1.2);
+  check('every island is wider than the screen, so panning is worth having',
+    klein.length === 0,
+    schirme.map(([id, s]) => `${id}=${s.x.toFixed(1)}x${s.y.toFixed(1)}`).join(' '));
+
+  const zooms = await page.evaluate(
+    () => ['mathe', 'sprache', 'entdecker'].map((id) => [id, window.__zoom(id)]));
+  check('and every one of them is still built at 2x',
+    zooms.every(([, z]) => z === 2), zooms.map(([id, z]) => `${id}=${z}x`).join(' '));
+
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(800);
+  const box = await page.locator('#stage').boundingBox();
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+
+  const ziehen = async (dx, dy) => {
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    for (let i = 1; i <= 6; i++) {
+      await page.mouse.move(cx + (dx * i) / 6, cy + (dy * i) / 6);
+      await page.waitForTimeout(16);
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(450);      // let any throw run out
+    return page.evaluate(() => window.__kamera());
+  };
+
+  const start = await page.evaluate(() => window.__kamera());
+  const nachLinks = await ziehen(-260, 0);
+  check('dragging the world moves the camera',
+    Math.abs(nachLinks.x - start.x) > 50,
+    `x ${start.x.toFixed(0)} -> ${nachLinks.x.toFixed(0)}`);
+  // Drag the world LEFT and the camera must go RIGHT. Getting this
+  // backwards is the commonest way a pan feels wrong and it is the one
+  // thing about a camera that a screenshot can never show.
+  check('and it moves the way the world does, not against it',
+    nachLinks.x > start.x, `${start.x.toFixed(0)} -> ${nachLinks.x.toFixed(0)}`);
+
+  // Now drag much further than the island is wide, and check after EACH
+  // direction. The first version of this did all four in a row and they
+  // cancelled out, so it passed with the clamp deleted — a check that
+  // returns the camera to where it started is not a check.
+  const verloren = [];
+  for (const [name, dx, dy] of [
+    ['links', -4000, 0], ['rechts', 4000, 0], ['hoch', 0, -4000], ['runter', 0, 4000],
+  ]) {
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.waitForTimeout(600);
+    await page.locator('.island-card').first().tap();
+    await page.waitForTimeout(700);
+    await ziehen(dx, dy);
+    if (!await page.evaluate(() => window.__ueberLand())) verloren.push(name);
+  }
+  check('the island cannot be dragged away from under the child',
+    verloren.length === 0,
+    verloren.length ? `open sea after dragging ${verloren.join(', ')}` : 'land in all four');
+
+  // Back to the middle, and then the important one: a drag ACROSS a
+  // house must not open it. Without the threshold, every pan that
+  // starts on a roof turns into a round of maths.
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForTimeout(700);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(800);
+  // A SHORT drag, starting and ending on the house. The world moves
+  // with the finger, so the house is still under the release point —
+  // which means the only thing that can stop this opening a round is
+  // the threshold. A long drag would pass for the wrong reason: the
+  // finger simply ends up somewhere else.
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  for (let i = 1; i <= 6; i++) {
+    await page.mouse.move(cx - (34 * i) / 6, cy - (10 * i) / 6);
+    await page.waitForTimeout(16);
+  }
+  await page.mouse.up();
+  await page.waitForTimeout(700);
+  check('a small drag on a house pans instead of opening it',
+    await page.locator('.card').count() === 0
+    && await page.locator('.hint').count() > 0);
+
+  // And the map: one button to the whole island, one tap to go there.
+  await page.locator('.karte').first().tap();
+  await page.waitForTimeout(600);
+  const uebersichtZoom = await page.evaluate(
+    () => document.querySelector('.karte') !== null);
+  check('the map button is there and switches the view', uebersichtZoom);
+  const vorher = await page.evaluate(() => window.__kamera());
+  await page.mouse.click(cx - 220, cy - 120);
+  await page.waitForTimeout(600);
+  const nachher = await page.evaluate(() => window.__kamera());
+  check('and a tap on the map takes you to that part of the island',
+    Math.hypot(nachher.x - vorher.x, nachher.y - vorher.y) > 20,
+    `${vorher.x.toFixed(0)},${vorher.y.toFixed(0)} -> ${nachher.x.toFixed(0)},${nachher.y.toFixed(0)}`);
+}
+
 // -------------------------------------------------------------- the shop
 
 // The shop GROWS rather than locking. Three things have to hold, and

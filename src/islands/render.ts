@@ -367,6 +367,127 @@ export function fit(cssW: number, cssH: number, islandId = 'mathe'): View {
   return { scale, ox, oy };
 }
 
+/**
+ * The zoom the island is built at.
+ *
+ * Fixed, and that is the whole change. `fit` used to pick whatever
+ * integer scale made the island fit the screen, which meant the island
+ * could only ever be as big as one screenful — and the moment it wanted
+ * to be bigger, every sprite in the game silently halved instead.
+ *
+ * So the zoom stops being a consequence of the island size and becomes
+ * a constant, and the island is free to be bigger than the screen. What
+ * pays for that is `klemme` below.
+ *
+ * Two, not three: at 3 the visible field is eleven tiles across, which
+ * is small enough that a child loses track of where the houses are.
+ */
+export const NAH = 2;
+
+/**
+ * Where the camera should arrive, in sprite pixels.
+ *
+ * The middle of the HOUSES, not the middle of the land. On an island
+ * that fitted the screen those were near enough the same point and it
+ * did not matter; on one that is half a screen wider than the view, the
+ * difference is whether a child opens the island looking at the Haus
+ * der verliebten Zahlen or at a stretch of empty coast.
+ *
+ * It fell over the moment the islands grew, and the thing that noticed
+ * was the suite: six checks that tap the middle of the screen to open a
+ * round stopped finding a house there.
+ */
+export function mitte(islandId: string): { x: number; y: number } {
+  const h = housesOn(islandId);
+  if (h.length) {
+    let sx = 0, sy = 0;
+    for (const hh of h) {
+      sx += (hh.x - hh.y) * (TW / 2);
+      sy += (hh.x + hh.y) * (TH / 2);
+    }
+    return { x: sx / h.length, y: sy / h.length };
+  }
+  const b = landBox(islandId);
+  return { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 };
+}
+
+/**
+ * How many screenfuls the island is, at the building zoom.
+ *
+ * Exists so the suite can assert that an island is actually bigger than
+ * the screen — otherwise the whole panning camera is machinery in
+ * service of nothing.
+ */
+export function inSchirmen(cssW: number, cssH: number, islandId: string):
+{ x: number; y: number } {
+  const b = landBox(islandId);
+  return {
+    x: (b.maxX - b.minX) / (cssW / NAH),
+    y: (b.maxY - b.minY) / (cssH / NAH),
+  };
+}
+
+/**
+ * Clamp a camera centre so the island can never be lost.
+ *
+ * This is the safety rail that makes a pannable camera safe to give to
+ * a six-year-old. There is no "you have scrolled into empty ocean and
+ * do not know which way is back" state, because the view rectangle is
+ * held inside the land — pan as hard as you like and the island is
+ * still under your thumb.
+ *
+ * When the island is SMALLER than the view in an axis, the clamp
+ * collapses to "centred", so a small island behaves exactly as it did
+ * before there was a camera at all.
+ */
+export function klemme(
+  cssW: number, cssH: number, islandId: string,
+  cam: { x: number; y: number }, scale = NAH,
+): { x: number; y: number } {
+  const b = landBox(islandId);
+  // The same breathing room `fit` uses, so the coast never sits hard
+  // against the edge of the screen and the tall things have headroom.
+  const padTop = 52, padBottom = 26, padSide = 26;
+  const minX = b.minX - padSide, maxX = b.maxX + padSide;
+  const minY = b.minY - padTop, maxY = b.maxY + padBottom;
+
+  const halbW = (cssW / scale) / 2;
+  const halbH = (cssH / scale) / 2;
+
+  const x = maxX - minX <= halbW * 2
+    ? (minX + maxX) / 2
+    : Math.min(Math.max(cam.x, minX + halbW), maxX - halbW);
+  const y = maxY - minY <= halbH * 2
+    ? (minY + maxY) / 2
+    : Math.min(Math.max(cam.y, minY + halbH), maxY - halbH);
+  return { x, y };
+}
+
+/**
+ * A view at the building zoom, centred on `cam` and clamped.
+ *
+ * Everything downstream — `tileToScreen`, `screenToTile`, the house hit
+ * boxes, the particle positions — reads `ox`/`oy` and does not care how
+ * they were arrived at, so the whole panning camera is this one
+ * function plus the clamp above.
+ */
+export function blick(
+  cssW: number, cssH: number, islandId: string,
+  cam: { x: number; y: number }, scale = NAH,
+): View {
+  const c = klemme(cssW, cssH, islandId, cam, scale);
+  return {
+    scale,
+    ox: (cssW / scale) / 2 - c.x,
+    oy: (cssH / scale) / 2 - c.y,
+  };
+}
+
+/** Where a view is looking, in sprite pixels. The inverse of `blick`. */
+export function kamera(v: View, cssW: number, cssH: number): { x: number; y: number } {
+  return { x: (cssW / v.scale) / 2 - v.ox, y: (cssH / v.scale) / 2 - v.oy };
+}
+
 export function tileToScreen(v: View, x: number, y: number): { sx: number; sy: number } {
   return {
     sx: v.ox + (x - y) * (TW / 2),
@@ -548,6 +669,19 @@ export function draw(
   // ------------------------------------------------- pass 2: the land
   // Painter order: row by row. A land tile is occluded only by land
   // further down or further right, so y-outer x-inner is exactly right.
+  //
+  // Both passes still walk the whole grid — 2601 tiles at GRID 51 —
+  // and skip what is off screen with a bounds test. Bounding the loops
+  // to the visible band instead was written, measured, and thrown away:
+  // 3.18ms before, 3.38ms after, which is noise.
+  //
+  // The frame did get more expensive when the islands grew, from 1.85ms
+  // to 3.18ms, and the reason is not the loop. It is that an island
+  // which no longer fits the screen fills the screen: about 165 land
+  // tiles used to be visible and now about 430 are, so there are two
+  // and a half times as many `drawImage` calls. That is real work and
+  // there is nothing to reclaim. LEARNINGS.md has this exact shape
+  // twice already.
   for (let y = 0; y < GRID; y++) {
     for (let x = 0; x < GRID; x++) {
       if (!isLand(o.islandId, x, y)) continue;

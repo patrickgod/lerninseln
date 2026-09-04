@@ -123,6 +123,20 @@ await page.locator('button', { hasText: 'Bauen' }).first().tap();
 await page.waitForTimeout(400);
 await page.locator('button', { hasText: 'Bauen' }).first().tap();
 await page.waitForTimeout(500);
+// The island is bigger than the screen now, so there is a map. This is
+// the pair worth looking at: standing on it, and the whole thing.
+if (want('karte')) {
+  await page.goto(`http://localhost:${PORT}/`);
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForTimeout(800);
+  await page.locator('.island-card').first().tap();
+  await page.waitForTimeout(800);
+  await page.locator('.karte').first().tap();
+  await page.waitForTimeout(700);
+  await shot('uebersicht');
+}
+
 if (want('shop')) await shot('shop');
 
 // The sweet corner, and the two animals that cannot be bought.

@@ -16,38 +16,41 @@ import { deco } from './decor.js';
 /**
  * The island is a GRID x GRID field of tiles.
  *
- * Twenty-three, and the number is a measurement rather than a taste.
+ * Fifty-one, and it is bigger than the screen. That is new.
  *
- * It went 13 -> 17 -> 23, because a child who has bought a dozen things
- * fills the place up, and an island you cannot keep decorating stops
- * being yours and becomes a puzzle with a solution.
+ * It went 13 -> 17 -> 23 -> 51, and the last step is a different kind
+ * of step from the others. Up to 23, the island had to FIT: `fit` chose
+ * whatever integer zoom put the whole thing on screen, so wanting a
+ * bigger island meant accepting smaller sprites, and 23 was the largest
+ * island that still drew at 2x on an iPad.
  *
- * 23 is the LARGEST grid at which all three islands still fit an iPad
- * at 2x. At 24 the Sprache island runs out of width, `fit` drops to 1,
- * and every sprite in the game is silently half the size — which is far
- * worse than a smaller island, and which nothing would have noticed.
- * Measured on the real page at 1080x810, per island:
+ * The zoom is a constant now (`render.NAH`) and the camera moves, so
+ * the size of an island and the size of its sprites have stopped being
+ * the same decision. What holds it together is `render.klemme`, which
+ * keeps the view rectangle inside the land: pan as hard as you like and
+ * the island is still under your thumb, so there is no ocean to get
+ * lost in.
  *
- *   GRID   19  20  21  22  23  24
- *   mathe   2   2   2   2   2   2
- *   sprache 2   2   2   2   2   1     <- the ceiling
- *   entdeck 2   2   2   2   2   2
+ * Measured on the real page at 1080x810, at the building zoom:
  *
- * A first attempt at this put the ceiling at 19, from a model of `fit`
- * written in a scratch script rather than from `fit` itself. The model
- * was wrong by four whole grid steps. `tools/verify.mjs` now asks the
- * running page, which cannot be wrong in that particular way, and it
- * has been watched failing at 24.
+ *   GRID   screenfuls (w x h)                free tiles
+ *    23    0.7x0.6  0.9x0.5  0.8x0.7         165 / 170 / 183
+ *    45    1.3x1.2  1.7x1.1  1.5x1.3         655 / 675 / 737
+ *    51    1.5x1.4  1.9x1.2  1.7x1.5         841 / 864 / 951
+ *    57    1.7x1.5  2.1x1.4  1.9x1.7        1059 /1089 /1189
  *
- * Bigger than 23 needs a camera that pans, which is a real feature and
- * not a constant.
+ * 51 rather than 57 because of the ROUNDEST island, not the widest one.
+ * Die Insel der Zahlen is the one his son uses most and it is the least
+ * elongated, so it is always the first to stop being worth panning: at
+ * 45 it moves half a screen, at 51 it moves a screen and a half. Past
+ * that the gain is more empty coast rather than more to do.
  *
- * Free tiles to build on, with the island empty:
- *
- *   GRID 17    65   (it also came with about thirty trees of its own)
- *   GRID 23   165 / 170 / 183   measured by tools/verify.mjs
+ * ~850 free tiles is deliberately more than anyone will fill. A cozy
+ * builder that can be finished stops being a place and becomes a task
+ * list, and the child builds outward from the houses in the middle,
+ * where the camera starts.
  */
-export const GRID = 23;
+export const GRID = 51;
 
 /**
  * The grid the house positions below were authored on.
@@ -272,7 +275,11 @@ export const HOUSES: HouseDef[] = [
   // now starts empty, four overlapping labels are the only thing on it.
   // `land()` pulls land up under any house that ends over water, so
   // spreading them is safe.
-  const streuung = 1.7;
+  // Wider now that the island is. The houses are still a village in
+  // the middle rather than scattered to the four coasts — a child
+  // arrives among them and builds outward — but they are far enough
+  // apart that finding one is a small journey.
+  const streuung = 2.7;
   void ca;
   for (const h of HOUSES) {
     h.x = Math.round((h.x - ca) * streuung + c);
